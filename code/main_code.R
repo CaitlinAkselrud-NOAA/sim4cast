@@ -4,31 +4,37 @@
 # date created: 13.07.2023
 # version: 1.0
 
-# devtools::install_github("timjmiller/wham", dependencies=TRUE)
-
-
 # libraries ---------------------------------------------------------------
 library(tidyverse)
-library(wham)
 library(here)
+library(stats)
+library(MARSS)
+library(forecast)
+library(datasets)
+library(TMB)
 
-# data --------------------------------------------------------------------
-
-
-# environmental covariates ------------------------------------------------
-
-
-# fit wham model ----------------------------------------------------------
-# base = Ex 1 model 3 (m3)
-# use example 2 to set up models with diff cov effects on recr
-# try changing sigmaR and sigma_olderages for survival effects
-
-# simulate wham time series -----------------------------------------------
+# functions ---------------------------------------------------------------
 
 
-# check variance and autocorrelation --------------------------------------
-# remember: you want combos of high/low AC and high/low variance
+# folders -----------------------------------------------------------------
 
-# save time series output -------------------------------------------------
+write.dir <- here::here("output") # otherwise will be saved in working directory
+dir.create(write.dir, showWarnings = FALSE)
+# setwd(write.dir)
+
+
+# initial state -----------------------------------------------------------
+
+
+# process error -----------------------------------------------------------
+
+
+# observation error -------------------------------------------------------
+
+
+# ar coefficient  ---------------------------------------------------------
+
+
+# environmental -----------------------------------------------------------
 
 
