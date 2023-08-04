@@ -30,7 +30,7 @@ dat_length <- 30
 burn <- 100-dat_length
 
 # environmental -----------------------------------------------------------
-# one: periodic square
+# one: periodic square with a little randomness
 set.seed(1011)
 period = 8
 env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
@@ -75,13 +75,17 @@ plot(ts_ns1[burn:t_length], type = 'l')
 acf(ts_ns1)
 pacf(ts_ns1)
 
-env_data <- data.frame(time = seq(from = 1, to = dat_length, by=1),
+env_data <- data.frame(#time = seq(from = 1, to = dat_length, by=1),
                        regime = env1_square[(burn + 1):t_length],
                        signal = env[(burn + 1):t_length],
                        climate = ts_ns1[(burn + 1):t_length],
                        pred = AR1_lg[(burn + 1):t_length],
                        prey = AR1_ma[(burn + 1):t_length])
 m_env <- t(env_data)
+colnames(m_env) <- seq(from = lubridate::year(Sys.Date())-dat_length+1,
+                       to = lubridate::year(Sys.Date()),
+                       by = 1)
+n <- nrow(m_env) - 1
 
 # initial state -----------------------------------------------------------
 # x_0 = initial state
