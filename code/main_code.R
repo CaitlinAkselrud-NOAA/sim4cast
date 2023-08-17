@@ -93,8 +93,112 @@ m_env <- t(env_data)
 
 # process error -----------------------------------------------------------
 
+## function for simulating various autoregressive process models
+proc_sim <- function(t = 30, B = 1, u = 0, CC = matrix(0), cc = matrix(0, ncol = t), Q = 1) {
+  ## process model is defined by
+  ##
+  ## t = 1: x_1 ~ N(0, Q)
+  ##
+  ## t > 1: x_t = b x_{t-1} + u + CC %*% cc_t + w_t
+  ##
+  ## `t` is length of desired time series
+  ## `B` is the AR(1) coef; default `ar = 1` gives a random walk
+  ## `u` is the bias/drift or instantaneous growth coef; default `u = 0` gives unbiased random walk
+  ## `CC` is a [1 x p] matrix of effect sizes for p covariates
+  ## `cc` is a [p x t] matrix of covariates
+  ## `Q` is the process variance; w_t ~ N(0, Q)
+  ##
+  ## ERROR checks
+  ## limits on B
+  if(abs(B) > 1) {
+    stop("Setting `|B| > 1` will cause extreme booms/busts.")
+  }
+  ## dims for covariates
+  if(ncol(CC) != nrow(cc)) {
+    stop("The number of cols in `CC` must equal the number of rows in `cc`.")
+  }
+  ## positive variance
+  if(Q <= 0) {
+    stop("The process variance `Q` must be a positive number.")
+    }
+  ##
+  ## initialize states and process errors
+  ## t = 1 drawn from normal distribution
+  xx <- ww <- rnorm(t, 0, Q)
+  ## simulate process for t > 1
+  for(i in 2:t) {
+    xx[i] <- B * xx[i-1] + u + CC %*% cc[,i] + ww[i]
+  }
+  return(xx)
+}
+
 
 # observation error -------------------------------------------------------
+
+obs_sim <- function(xx, a = 0, DD = matrix(0), dd = matrix(0, ncol = length(xx)), R = 1) {
+  ## observation model is defined by
+  ##
+  ## y_t = x_t + a + DD %*% dd_t + v_t
+  ##
+  ## `xx` is simulated process (state)
+  ## `a` is an offset
+  ## `DD` is a [1 x m] matrix of effect sizes for p covariates
+  ## `dd` is a [m x t] matrix of covariates
+  ## `R` is the obs variance; v_t ~ N(0, R)
+  ##
+  ## ERROR checks
+  ## dims for covariates
+  if(ncol(DD) != nrow(dd)) {
+    stop("The number of cols in `CC` must equal the number of rows in `cc`.")
+  }
+  ## positive variance
+  if(R <= 0) {
+    stop("The observation variance `R` must be a positive number.")
+  }
+  ##
+  ## create obs errors
+  vv <- rnorm(length(xx), 0, R)
+  ## add obs error
+  yy <- xx + a + DD %*% dd + vv
+  return(as.vector(yy))
+}
+
+
+## simple plotting function ------------------------------------------------
+
+plot_ssm <- function(state, obs) {
+  plot.ts(obs, ylim = range(state, obs), las = 1, type = "n",
+          ylab = expression(paste(italic(x[t])," or ", italic(y[t]))))
+  lines(seq(length(state)), state,
+        type = "o", pch = 16)
+  lines(seq(length(obs)), obs, col = "blue",
+        type = "o", pch = 16)
+}
+
+
+## examples ---------------------------------------------------------------
+
+## random walk
+xx <- proc_sim()
+yy <- obs_sim(xx)
+plot_ssm(xx, yy)
+
+## biased random walk with offset obs
+xx <- proc_sim(u = 1)
+yy <- obs_sim(xx, a = 10)
+plot_ssm(xx, yy)
+
+## stationary AR(1) with Var(v_t) = 2
+xx <- proc_sim(B = 0.5)
+yy <- obs_sim(xx, R = 2)
+plot_ssm(xx, yy)
+
+## stationary AR(1) with sinusoidal covariate
+xx <- proc_sim(B = 0.5,
+               CC = matrix(1),
+               cc = matrix(sin(2 * pi * seq(30) / 15), nrow = 1))
+yy <- obs_sim(xx)
+plot_ssm(xx, yy)
 
 
 # ar coefficient  ---------------------------------------------------------
