@@ -96,12 +96,52 @@ n <- nrow(m_env) - 1
 
 
 # process error -----------------------------------------------------------
+# x_t+1  = B*x_t + u + C*env_t + w_t
+# B = identity matrix
+# (m = number of pop trajectories (num rows)) = 1 gor now
+# u = scalar on B #if b is not one, you de-mean the data
+# B = 1 is random walk setup
+# u  = 0.01 = 1% per year pop inc
+# C = m rows and # env cols
+# C = matrix(0.1, -0.1, 0.2) #effects of environment
 
+# sim data
+# 1) use MARSSsimulate but you're locked intp additive effects
+# 2) brute force simulation eg
+
+# x_t+1  = B*x_t + u + C*env_t + w_t
+# y_t = x_t + v_t
+# See and Holms adjusted number of rows in y
+
+r = .1 #obsv variance
+q = .1 #process
+nsim = 100
+m = 1 #number of populations, so x has 1 row
+
+# set initital state
+r_err <- rnorm
+sim_x[,1] <- rnorm(nsim, 0, 0.1) #0 in log scale; just some variance
+sim_y[,1] <- sim_x[,1] + r_err
+
+
+sim_dat = matrix(NA, nsim, t_length)
+for(t in 2:t_length)
+{
+  r_err <- rnorm(nsim, 0, sd = sqrt(r)) #r is variance, no sd, so put in sd
+  q_err <- rnorm(nsim, 0, sd = sqrt(q))
+  sim_x[,t] <- B * sim_data[,t-1] + U + q_err
+  # this only works if m = 1 (pop data = 1 row)
+  sim_y[,t] <- B * sim_data[,t-1] + U + r_err
+  # can play with C to get diff env effects
+}
 
 # observation error -------------------------------------------------------
 
 
 # ar coefficient  ---------------------------------------------------------
+
+
+# notes -------------------------------------------------------------------
 
 
 
