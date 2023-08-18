@@ -75,13 +75,20 @@ plot(ts_ns1[burn:t_length], type = 'l')
 acf(ts_ns1)
 pacf(ts_ns1)
 
-env_data <- data.frame(time = seq(from = 1, to = dat_length, by=1),
-                       regime = env1_square[(burn + 1):t_length],
-                       signal = env[(burn + 1):t_length],
-                       climate = ts_ns1[(burn + 1):t_length],
-                       pred = AR1_lg[(burn + 1):t_length],
-                       prey = AR1_ma[(burn + 1):t_length])
+env_data <- data.frame(#time = seq(from = 1, to = dat_length, by=1),
+  regime = env1_square[(burn + 1):t_length],
+  signal = env[(burn + 1):t_length],
+  climate = ts_ns1[(burn + 1):t_length],
+  pred = AR1_lg[(burn + 1):t_length],
+  prey = AR1_ma[(burn + 1):t_length])
+
 m_env <- t(env_data)
+
+colnames(m_env) <- seq(from = lubridate::year(Sys.Date())-dat_length+1,
+                       to = lubridate::year(Sys.Date()),
+                       by = 1)
+
+n <- nrow(m_env) - 1
 
 # initial state -----------------------------------------------------------
 # x_0 = initial state
@@ -181,14 +188,14 @@ plot_ssm <- function(state, obs) {
 ## random walk
 xx <- proc_sim()
 yy <- obs_sim(xx)
-plot_ssm(xx, yy)
+plot_ssm(xx, yy) #black = "state", blue = "observed"
 
 ## biased random walk with offset obs
 xx <- proc_sim(u = 1)
 yy <- obs_sim(xx, a = 10)
 plot_ssm(xx, yy)
 
-## stationary AR(1) with Var(v_t) = 2
+## stationary AR(1) with Var(v_t) = 2; high obsv variance
 xx <- proc_sim(B = 0.5)
 yy <- obs_sim(xx, R = 2)
 plot_ssm(xx, yy)
@@ -203,5 +210,19 @@ plot_ssm(xx, yy)
 
 # ar coefficient  ---------------------------------------------------------
 
+xx <-  proc_sim(t = dat_length,
+                B = 1,                     ## `B` is the AR(1) coef
+                u = 0,                     ## `u` is the bias/drift or instantaneous growth coef
+                CC = t(matrix(c(1, .5, .25, .7, 2))),            ## `CC` is a [1 x p] matrix of effect sizes for p covariates
+                cc = m_env,                ## `cc` is a [p x t] matrix of covariates
+                Q = 1)                     ## `Q` is the process variance; w_t ~ N(0, Q)
+
+yy <- obs_sim(xx,
+              a = 0,                       ## `a` is an offset
+              DD = matrix(0),              ## `DD` is a [1 x m] matrix of effect sizes for p covariates
+              dd = matrix(0, ncol = length(xx)),   ## `dd` is a [m x t] matrix of covariates
+              R = 1)                       ## `R` is the obs variance; v_t ~ N(0, R)
+
+plot_ssm(xx, yy)
 
 
