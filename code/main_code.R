@@ -80,7 +80,8 @@ env_data <- data.frame(#time = seq(from = 1, to = dat_length, by=1),
   signal = env[(burn + 1):t_length],
   climate = ts_ns1[(burn + 1):t_length],
   pred = AR1_lg[(burn + 1):t_length],
-  prey = AR1_ma[(burn + 1):t_length])
+  prey = AR1_ma[(burn + 1):t_length]) %>%
+  scale(center = TRUE, scale = TRUE)
 
 m_env <- t(env_data)
 
@@ -118,7 +119,7 @@ proc_sim <- function(t = 30, B = 1, u = 0, CC = matrix(0), cc = matrix(0, ncol =
   ## ERROR checks
   ## limits on B
   if(abs(B) > 1) {
-    stop("Setting `|B| > 1` will cause extreme booms/busts.")
+    print("Setting `|B| > 1` will cause extreme booms/busts.")
   }
   ## dims for covariates
   if(ncol(CC) != nrow(cc)) {
@@ -131,6 +132,7 @@ proc_sim <- function(t = 30, B = 1, u = 0, CC = matrix(0), cc = matrix(0, ncol =
   ##
   ## initialize states and process errors
   ## t = 1 drawn from normal distribution
+  set.seed(1234)
   xx <- ww <- rnorm(t, 0, Q)
   ## simulate process for t > 1
   for(i in 2:t) {
@@ -164,6 +166,7 @@ obs_sim <- function(xx, a = 0, DD = matrix(0), dd = matrix(0, ncol = length(xx))
   }
   ##
   ## create obs errors
+  set.seed(1234)
   vv <- rnorm(length(xx), 0, R)
   ## add obs error
   yy <- xx + a + DD %*% dd + vv
@@ -208,21 +211,45 @@ yy <- obs_sim(xx)
 plot_ssm(xx, yy)
 
 
-# ar coefficient  ---------------------------------------------------------
+
+# scenarios ---------------------------------------------------------------
+
+
+# * base ------------------------------------------------------------------
 
 xx <-  proc_sim(t = dat_length,
                 B = 1,                     ## `B` is the AR(1) coef
                 u = 0,                     ## `u` is the bias/drift or instantaneous growth coef
-                CC = t(matrix(c(1, .5, .25, .7, 2))),            ## `CC` is a [1 x p] matrix of effect sizes for p covariates
+                CC = t(matrix(c(-.7, -.5, .25, .95, 1.5))), ## `CC` is a [1 x p] matrix of effect sizes for p covariates
                 cc = m_env,                ## `cc` is a [p x t] matrix of covariates
                 Q = 1)                     ## `Q` is the process variance; w_t ~ N(0, Q)
 
-yy <- obs_sim(xx,
-              a = 0,                       ## `a` is an offset
-              DD = matrix(0),              ## `DD` is a [1 x m] matrix of effect sizes for p covariates
-              dd = matrix(0, ncol = length(xx)),   ## `dd` is a [m x t] matrix of covariates
-              R = 1)                       ## `R` is the obs variance; v_t ~ N(0, R)
+yy <- list()
+yy$base <- obs_sim(xx,
+                   a = 0,                       ## `a` is an offset
+                   DD = matrix(0),              ## `DD` is a [1 x m] matrix of effect sizes for p covariates
+                   dd = matrix(0, ncol = length(xx)),   ## `dd` is a [m x t] matrix of covariates
+                   R = 1)                       ## `R` is the obs variance; v_t ~ N(0, R)
+yy$fishery <- obs_sim(xx,
+                      a = -10,                       ## `a` is an offset
+                      DD = matrix(0),              ## `DD` is a [1 x m] matrix of effect sizes for p covariates
+                      dd = matrix(0, ncol = length(xx)),   ## `dd` is a [m x t] matrix of covariates
+                      R = 1)
+yy$survey1 <- obs_sim(xx,
+                      a = 0,                       ## `a` is an offset
+                      DD = matrix(0),              ## `DD` is a [1 x m] matrix of effect sizes for p covariates
+                      dd = matrix(0, ncol = length(xx)),   ## `dd` is a [m x t] matrix of covariates
+                      R = 1)
+yy$survey2 <- obs_sim(xx,
+                      a = 0,                       ## `a` is an offset
+                      DD = matrix(0),              ## `DD` is a [1 x m] matrix of effect sizes for p covariates
+                      dd = matrix(0, ncol = length(xx)),   ## `dd` is a [m x t] matrix of covariates
+                      R = 1)
 
-plot_ssm(xx, yy)
+plot_ssm(xx, yy$base)
+plot_ssm(xx, yy$fishery)
+plot_ssm(xx, yy$survey1)
+plot_ssm(xx, yy$survey2)
+plot_ssm(exp(xx), exp(yy$base))
 
 
