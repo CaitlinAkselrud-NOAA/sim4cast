@@ -12,6 +12,7 @@ library(MARSS)
 library(forecast)
 library(datasets)
 library(TMB)
+library(cowplot)
 
 # functions ---------------------------------------------------------------
 
@@ -40,12 +41,20 @@ plot(env1_square[burn:t_length], type = 'l')
 acf(env1_square)
 pacf(env1_square)
 
+jpeg(here::here("figures","env1_square.jpg"), width = 600, height = 350)
+plot(env1_square[burn:t_length], type = 'l')
+dev.off()
+
 # two: amplified signal
 env <- sin((2*pi*t)/(2/(t)))
 plot(env, type = 'l')
 plot(env[burn:t_length], type = 'l')
 acf(env)
 pacf(env)
+
+jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
+plot(env[burn:t_length], type = 'l')
+dev.off()
 
 # three: strong ar (feedback)
 set.seed(1234)
@@ -55,6 +64,10 @@ plot(AR1_lg, type = 'l')
 plot(AR1_lg[burn:t_length], type = 'l')
 acf(AR1_lg)
 pacf(AR1_lg)
+
+jpeg(here::here("figures","AR_lg.jpg"), width = 600, height = 350)
+plot(AR1_lg[burn:t_length], type = 'l')
+dev.off()
 
 # four: ar and ma
 # cps-like/ prey index that's more env driven
@@ -66,6 +79,10 @@ plot(AR1_ma[burn:t_length], type = 'l')
 acf(AR1_ma)
 pacf(AR1_ma)
 
+jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
+plot(AR1_ma[burn:t_length], type = 'l')
+dev.off()
+
 # five: non-stationary (trend)
 set.seed(5678)
 ts_ns <- list(order = c(1, 1, 0), ar = -0.5)
@@ -75,12 +92,38 @@ plot(ts_ns1[burn:t_length], type = 'l')
 acf(ts_ns1)
 pacf(ts_ns1)
 
+jpeg(here::here("figures","ts_ns1.jpg"), width = 600, height = 350)
+plot(ts_ns1[burn:t_length], type = 'l')
+dev.off()
+
+# six: make random walk
+rw_base <- rw <- rnorm(n = 100)
+for(t in 2:100) {
+  rw[t] <- rw[t-1] + rw_base[t]
+}
+
+# seven: create lagged rw
+lag_step <- 2
+rw_lag <- rw_base
+for(t in (1+lag_step):100) {
+  rw_lag[t] <- rw_lag[t-lag_step] + rw_base[t]
+}
+
+# get correct time for rw's
+burn_to <- dim(m_env)[2]
+random_walk <- tail(rw, n = burn_to)
+random_walk_lag <- tail(rw_lag, n = burn_to)
+
+# put env data together
+
 env_data <- data.frame(#time = seq(from = 1, to = dat_length, by=1),
   regime = env1_square[(burn + 1):t_length],
   signal = env[(burn + 1):t_length],
   climate = ts_ns1[(burn + 1):t_length],
   pred = AR1_lg[(burn + 1):t_length],
-  prey = AR1_ma[(burn + 1):t_length]) %>%
+  prey = AR1_ma[(burn + 1):t_length],
+  random_walk,
+  random_walk_lag) %>%
   scale(center = TRUE, scale = TRUE)
 
 m_env <- t(env_data)
@@ -91,6 +134,83 @@ colnames(m_env) <- seq(from = lubridate::year(Sys.Date())-dat_length+1,
 
 n <- nrow(m_env) - 1
 
+env_data <- as_tibble(env_data)
+
+# sim notes ---------------------------------------------------------------
+
+# simple: regime + signal + climate + pred + prey
+# surplus prod model w/ deviates that are a fxn of env indices
+#  + add on fishing
+#  + age-struct pop- cohorts
+
+# correlations in space in time
+# bad sampling
+# finite sample size
+
+# variance-bias trade-off (aggregation level vs number of sample sizes)
+# trade-off between sample size and variance
+
+# neural nets- tensorflow, complex, same as trees, harder to fit
+# is there only so much information, and you only get so much more from more complex models;
+# # OR do we need more coaching on model config?
+
+# start with simple sim and simple model (RF)
+# how weird and specific do we have to make things to get it right?
+
+# underperformance vs overperformance errors
+# under = lags incorrect, eg
+# 0ver = r^2 = .99 without thinking about spatio-temporal autocorr
+# the less well specified your model, the porer performance; if you get it wrong and have over perf, bigger prob
+
+
+# make target data ---------------------------------------------------------
+
+m_env
+n
+
+# make grid of factors-> env + lag
+g1 <- expand_grid(x = "base", y = c("regime","signal","drift","AR","ARMA", "lag"))
+g2 <- expand_grid(x = c("random_walk", g1$y, "all-simple", "all-complex", "multicollinear"),
+                  y = c("complete", "random missing", "seasonal missing","blocks", "truncated"))
+
+# generate all combos of target data
+# target = rw + regime + signal + drift + AR + ARMA + lag
+base_simple <- env_data$random_walk +
+  env_data$regime +
+  env_data$signal +
+  env_data$climate  +
+  env_data$pred +
+  env_data$prey +
+  env_data$random_walk_lag
+
+input_data <- env_data %>%
+  bind_cols(base_simple = as.vector(base_simple)) %>%
+  scale(center = TRUE, scale = TRUE) %>%
+  bind_cols(sim_year = seq(from = lubridate::year(Sys.Date())-dat_length+1,
+                           to = lubridate::year(Sys.Date()),
+                           by = 1))
+
+ggplot(input_data) +
+  geom_line(aes(x = sim_year, y = base_simple)) +
+  geom_line(aes(x = sim_year, y = regime), col = "red") +
+  geom_line(aes(x = sim_year, y = signal), col = "orange") +
+  geom_line(aes(x = sim_year, y = climate), col = "yellow") +
+  geom_line(aes(x = sim_year, y = pred), col = "green") +
+  geom_line(aes(x = sim_year, y = prey), col = "blue") +
+  geom_line(aes(x = sim_year, y = random_walk), col = "purple") +
+  geom_line(aes(x = sim_year, y = random_walk_lag), col = "pink")
+# CIA: you will eventually need some nicer plots for this
+
+write_csv(input_data, file = here::here("output", paste0("sim_input_data_base_simple", Sys.Date(),".csv")))
+
+base_complex
+
+# also create example with multicollinear factors
+
+
+# extra code --------------------------------------------------------------
+
+
 # initial state -----------------------------------------------------------
 # x_0 = initial state
 # x_t = hidden state at each time step
@@ -100,6 +220,12 @@ n <- nrow(m_env) - 1
 
 
 # process error -----------------------------------------------------------
+
+# model misspecification: say you feed incorrect lags; don't have the correct process specification
+# what is process error? diff btw parametric vs nonparametric models
+# ML could learn an incorrect specification eg climate + signal vs climate * signa;
+# # BUT if you get the lag incorrect, it can't learn that
+
 
 ## function for simulating various autoregressive process models
 proc_sim <- function(t = 30, B = 1, u = 0, CC = matrix(0), cc = matrix(0, ncol = t), Q = 1) {
