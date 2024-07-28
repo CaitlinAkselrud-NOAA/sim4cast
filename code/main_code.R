@@ -206,7 +206,7 @@ write_csv(input_data, file = here::here("output", paste0("sim_input_data_base_si
 base_complex
 
 # also create example with multicollinear factors
-
+# CIA: idea- pick one factor, multiply the remaining factors by base_factor + some time lag
 
 # extra code --------------------------------------------------------------
 
