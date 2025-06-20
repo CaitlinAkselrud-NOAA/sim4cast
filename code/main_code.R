@@ -110,7 +110,7 @@ for(t in (1+lag_step):100) {
 }
 
 # get correct time for rw's
-burn_to <- dim(m_env)[2]
+burn_to <- t_length - burn
 random_walk <- tail(rw, n = burn_to)
 random_walk_lag <- tail(rw_lag, n = burn_to)
 
@@ -183,8 +183,19 @@ base_simple <- env_data$random_walk +
   env_data$prey +
   env_data$random_walk_lag
 
+base_complex <- env_data$random_walk *
+  env_data$regime *
+  env_data$signal *
+  env_data$climate  *
+  env_data$pred *
+  env_data$prey *
+  env_data$random_walk_lag
+base_complex_log <- log(as.vector(base_complex) + (1 - min(as.vector(base_complex))))
+
 input_data <- env_data %>%
-  bind_cols(base_simple = as.vector(base_simple)) %>%
+  bind_cols(base_simple = as.vector(base_simple),
+            base_complex = as.vector(base_complex)) %>%
+            # base_complex_log = base_complex_log) %>%
   scale(center = TRUE, scale = TRUE) %>%
   bind_cols(sim_year = seq(from = lubridate::year(Sys.Date())-dat_length+1,
                            to = lubridate::year(Sys.Date()),
@@ -192,6 +203,8 @@ input_data <- env_data %>%
 
 ggplot(input_data) +
   geom_line(aes(x = sim_year, y = base_simple)) +
+  geom_line(aes(x = sim_year, y = base_complex), linetype = "dashed") +
+  # geom_line(aes(x = sim_year, y = base_complex_log), linetype = "dotted") +
   geom_line(aes(x = sim_year, y = regime), col = "red") +
   geom_line(aes(x = sim_year, y = signal), col = "orange") +
   geom_line(aes(x = sim_year, y = climate), col = "yellow") +
