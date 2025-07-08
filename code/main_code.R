@@ -13,6 +13,7 @@ library(forecast)
 library(datasets)
 library(TMB)
 library(cowplot)
+library(patchwork)
 
 # functions ---------------------------------------------------------------
 
@@ -28,22 +29,71 @@ dir.create(write.dir, showWarnings = FALSE)
 t_length <- 100
 t <- 1:t_length
 dat_length <- 30
-burn <- 100-dat_length
+burn <- 100-dat_length +1
 
 # environmental -----------------------------------------------------------
+make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_length)
+{
+  # jpeg(here::here("figures", paste0(name,".jpg")), width = 600, height = 800)
+  #
+  # par(mfrow=c(3,1), mar = c(1,15,4,2), oma = c(1,1,1,1))
+  # plot(env_index[burn:t_length], type = 'l',
+  #      main = name, ylab = paste(name, "index"), xlab = "", xaxt="n",
+  #      cex.lab=2, cex.axis=2, cex.main=2)
+  # par(mar = c(1,15,1,2))
+  # acf(env_index, main = "", lag.max = length(env_index[burn:t_length]),
+  #     xlab = "", xaxt="n", cex.lab=2, cex.axis=2, cex.main=2)
+  # par(mar = c(10,15,1,2))
+  # pacf(env_index, main = "", lag.max = length(env_index[burn:t_length]),
+  #      xlab = "Year", cex.lab=2, cex.axis=2, cex.main=2)
+  #
+  # dev.off()
+
+
+  index_p <- ggplot() +
+    geom_line(aes(x = seq(from = 1, to = length(burn:t_length),
+                          by = 1), y = env_index[burn:t_length]))+
+    theme_classic() +
+    labs(x = '',
+         y = paste(name, "index"),
+         title = name)
+
+  acf_p <- ggAcf(env_index[burn:t_length], lag.max = length(env_index[burn:t_length])) +
+    theme_classic() +
+    labs(x = '',
+         title = '')
+
+  pacf_p <- ggPacf(env_index[burn:t_length], lag.max = length(env_index[burn:t_length])) +
+    theme_classic() +
+    labs(x = 'Years',
+         title = '')
+
+  p3 <- index_p + acf_p + pacf_p + plot_layout(ncol = 1)
+
+  ggsave(plot = p3, filename = paste0(name, "index.jpg"), path = here::here("figures"),
+         width = 6, height = 12)
+  return(p3)
+}
+
+
 # one: periodic square
 set.seed(1011)
 period = 8
 env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
 # env <- 2*(2*(floor(1/period*t))-floor(2*1/period*t)) +1 #or this- same
 plot(env1_square, type = 'l')
-plot(env1_square[burn:t_length], type = 'l')
-acf(env1_square)
-pacf(env1_square)
 
-jpeg(here::here("figures","env1_square.jpg"), width = 600, height = 350)
-plot(env1_square[burn:t_length], type = 'l')
-dev.off()
+par(mfrow=c(3,1), mar = c(1,4,2,2))
+plot(env1_square[burn:t_length], type = 'l', main = "Regime", ylab = "Regime index", xlab = "", xaxt="n")
+par(mar = c(1,4,1,2))
+acf(env1_square, main = "", lag.max = length(env1_square[burn:t_length]), xlab = "", xaxt="n")
+par(mar = c(4,4,1,2))
+pacf(env1_square, main = "", lag.max = length(env1_square[burn:t_length]), xlab = "Year")
+#
+# jpeg(here::here("figures","env1_square.jpg"), width = 600, height = 350)
+# plot(env1_square[burn:t_length], type = 'l')
+# dev.off()
+regime_p <- make_env_plots(env_index = env1_square, name = "Regime", burn = burn, t_length = t_length)
 
 # two: amplified signal
 env <- sin((2*pi*t)/(2/(t)))
@@ -52,9 +102,10 @@ plot(env[burn:t_length], type = 'l')
 acf(env)
 pacf(env)
 
-jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
-plot(env[burn:t_length], type = 'l')
-dev.off()
+# jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
+# plot(env[burn:t_length], type = 'l')
+# dev.off()
+signal_p <- make_env_plots(env_index = env, name = "Signal", burn = burn, t_length = t_length)
 
 # three: strong ar (feedback)
 set.seed(1234)
@@ -65,9 +116,11 @@ plot(AR1_lg[burn:t_length], type = 'l')
 acf(AR1_lg)
 pacf(AR1_lg)
 
-jpeg(here::here("figures","AR_lg.jpg"), width = 600, height = 350)
-plot(AR1_lg[burn:t_length], type = 'l')
-dev.off()
+# jpeg(here::here("figures","AR_lg.jpg"), width = 600, height = 350)
+# plot(AR1_lg[burn:t_length], type = 'l')
+# dev.off()
+pred_p <- make_env_plots(env_index = AR1_lg, name = "Predator", burn = burn, t_length = t_length)
+
 
 # four: ar and ma
 # cps-like/ prey index that's more env driven
@@ -79,9 +132,11 @@ plot(AR1_ma[burn:t_length], type = 'l')
 acf(AR1_ma)
 pacf(AR1_ma)
 
-jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
-plot(AR1_ma[burn:t_length], type = 'l')
-dev.off()
+# jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
+# plot(AR1_ma[burn:t_length], type = 'l')
+# dev.off()
+prey_p <- make_env_plots(env_index = AR1_ma, name = "Prey", burn = burn, t_length = t_length)
+
 
 # five: non-stationary (trend)
 set.seed(5678)
@@ -92,9 +147,11 @@ plot(ts_ns1[burn:t_length], type = 'l')
 acf(ts_ns1)
 pacf(ts_ns1)
 
-jpeg(here::here("figures","ts_ns1.jpg"), width = 600, height = 350)
-plot(ts_ns1[burn:t_length], type = 'l')
-dev.off()
+# jpeg(here::here("figures","ts_ns1.jpg"), width = 600, height = 350)
+# plot(ts_ns1[burn:t_length], type = 'l')
+# dev.off()
+climate_p <- make_env_plots(env_index = ts_ns1, name = "Climate", burn = burn, t_length = t_length)
+
 
 # six: make random walk
 rw_base <- rw <- rnorm(n = 100)
@@ -110,9 +167,12 @@ for(t in (1+lag_step):100) {
 }
 
 # get correct time for rw's
-burn_to <- t_length - burn
+burn_to <- t_length - burn + 1
 random_walk <- tail(rw, n = burn_to)
 random_walk_lag <- tail(rw_lag, n = burn_to)
+
+rw_p <- make_env_plots(env_index = rw_base, name = "Random walk", burn = burn, t_length = t_length)
+rwlag_p <- make_env_plots(env_index = rw_lag, name = "Random walk lag", burn = burn, t_length = t_length)
 
 # put env data together
 
@@ -123,8 +183,8 @@ env_data <- data.frame(#time = seq(from = 1, to = dat_length, by=1),
   pred = AR1_lg[(burn + 1):t_length],
   prey = AR1_ma[(burn + 1):t_length],
   random_walk,
-  random_walk_lag) %>%
-  scale(center = TRUE, scale = TRUE)
+  random_walk_lag) #%>%
+  # scale(center = TRUE, scale = TRUE)
 
 m_env <- t(env_data)
 
@@ -136,6 +196,34 @@ n <- nrow(m_env) - 1
 
 env_data <- as_tibble(env_data)
 
+env_data_sc <- as_tibble(env_data) %>%
+  scale(center = TRUE, scale = TRUE) %>% as_tibble
+
+env_p <- regime_p | signal_p |climate_p |pred_p | prey_p |rw_p |rwlag_p
+ggsave(plot = env_p, filename = "all_env.jpg", path = here::here("figures"),
+       width = 21, height = 9)
+
+# env indices- full -------------------------------------------------------
+
+env_data_full <- data.frame(
+  regime = env1_square,
+  signal = env,
+  climate = tail(ts_ns1, n = length(env1_square)),
+  pred = AR1_lg,
+  prey = AR1_ma,
+  random_walk = tail(rw, n = length(env1_square)),
+  random_walk_lag = tail(rw_lag, n = length(env1_square))) #%>%
+# scale(center = TRUE, scale = TRUE)
+
+m_env_full <- t(env_data_full)
+
+colnames(m_env_full) <- seq(from = lubridate::year(Sys.Date())-100+1,
+                       to = lubridate::year(Sys.Date()),
+                       by = 1)
+
+n_full <- nrow(m_env_full) - 1
+
+env_data_full <- as_tibble(env_data_full)
 # sim notes ---------------------------------------------------------------
 
 # simple: regime + signal + climate + pred + prey
@@ -175,28 +263,42 @@ g2 <- expand_grid(x = c("random_walk", g1$y, "all-simple", "all-complex", "multi
 
 # generate all combos of target data
 # target = rw + regime + signal + drift + AR + ARMA + lag
-base_simple <- env_data$random_walk +
-  env_data$regime +
-  env_data$signal +
-  env_data$climate  +
-  env_data$pred +
-  env_data$prey +
-  env_data$random_walk_lag
+base_simple <- env_data_sc$random_walk +
+  env_data_sc$regime +
+  env_data_sc$signal +
+  env_data_sc$climate  +
+  env_data_sc$pred +
+  env_data_sc$prey +
+  env_data_sc$random_walk_lag
 
-base_complex <- env_data$random_walk *
-  env_data$regime *
-  env_data$signal *
-  env_data$climate  *
-  env_data$pred *
-  env_data$prey *
-  env_data$random_walk_lag
+base_complex <- env_data_sc$random_walk *
+  env_data_sc$regime *
+  env_data_sc$signal *
+  env_data_sc$climate  *
+  env_data_sc$pred *
+  env_data_sc$prey *
+  env_data_sc$random_walk_lag
 base_complex_log <- log(as.vector(base_complex) + (1 - min(as.vector(base_complex))))
 
 input_data <- env_data %>%
   bind_cols(base_simple = as.vector(base_simple),
-            base_complex = as.vector(base_complex)) %>%
-            # base_complex_log = base_complex_log) %>%
-  scale(center = TRUE, scale = TRUE) %>%
+            base_complex = as.vector(base_complex),
+            base_complex_log = base_complex_log) %>%
+  # scale(center = TRUE, scale = TRUE) %>%
+  bind_cols(sim_year = seq(from = lubridate::year(Sys.Date())-dat_length+1,
+                           to = lubridate::year(Sys.Date()),
+                           by = 1))
+
+input_env_data_full <- env_data_full %>%
+  bind_cols(sim_year = seq(from = lubridate::year(Sys.Date())-100+1,
+                           to = lubridate::year(Sys.Date()),
+                           by = 1))
+
+input_data_sc <- env_data_sc %>%
+  bind_cols(base_simple = as.vector(base_simple),
+            base_complex = as.vector(base_complex),
+            base_complex_log = base_complex_log) %>%
+  # scale(center = TRUE, scale = TRUE) %>%
   bind_cols(sim_year = seq(from = lubridate::year(Sys.Date())-dat_length+1,
                            to = lubridate::year(Sys.Date()),
                            by = 1))
@@ -214,9 +316,12 @@ ggplot(input_data) +
   geom_line(aes(x = sim_year, y = random_walk_lag), col = "pink")
 # CIA: you will eventually need some nicer plots for this
 
-write_csv(input_data, file = here::here("output", paste0("sim_input_data_base_simple", Sys.Date(),".csv")))
+write_csv(input_data, file = here::here("output", paste0("sim_input_rawdata_", Sys.Date(),".csv")))
+write_csv(input_data_sc, file = here::here("output", paste0("sim_input_scaleddata_", Sys.Date(),".csv")))
+write_csv(input_env_data_full, file = here::here("output", paste0("sim_input_envdata_fullts_", Sys.Date(),".csv")))
 
-base_complex
+
+# base_complex
 
 # also create example with multicollinear factors
 # CIA: idea- pick one factor, multiply the remaining factors by base_factor + some time lag
