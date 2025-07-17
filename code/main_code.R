@@ -80,8 +80,20 @@ make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_lengt
 set.seed(1011)
 period = 8
 env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
-# env <- 2*(2*(floor(1/period*t))-floor(2*1/period*t)) +1 #or this- same
-plot(env1_square, type = 'l')
+env1_square <- env1_square %>%
+  as_tibble() %>%
+  # mutate(regime = case_when(value == 0 ~ rnorm(sum(value == 0), mean = 3, sd = 1),
+  #                           value == 1 ~ rnorm(sum(value == 1), mean = 5, sd = 1)))
+  mutate(
+    regime = if_else(
+      value == 0,
+      rnorm(n(), mean = 3, sd = 1), # n() gives the number of rows in the current group (here, all rows)
+      rnorm(n(), mean = 5, sd = 1)))
+
+plot(env1_square$value, type = 'l')
+plot(env1_square$regime, type = 'l')
+plot(env1_square$regime[burn:t_length], type = 'l')
+
 
 par(mfrow=c(3,1), mar = c(1,4,2,2))
 plot(env1_square[burn:t_length], type = 'l', main = "Regime", ylab = "Regime index", xlab = "", xaxt="n")
@@ -93,14 +105,16 @@ pacf(env1_square, main = "", lag.max = length(env1_square[burn:t_length]), xlab 
 # jpeg(here::here("figures","env1_square.jpg"), width = 600, height = 350)
 # plot(env1_square[burn:t_length], type = 'l')
 # dev.off()
-regime_p <- make_env_plots(env_index = env1_square, name = "Regime", burn = burn, t_length = t_length)
+regime_p <- make_env_plots(env_index = env1_square$regime, name = "Regime", burn = burn, t_length = t_length)
 
 # two: amplified signal
-env <- sin((2*pi*t)/(2/(t)))
+# env <- sin((2*pi*t)/(2/(t)))
+env <- sin(pi*(t^2))
 plot(env, type = 'l')
 plot(env[burn:t_length], type = 'l')
 acf(env)
 pacf(env)
+plot(diff(env))
 
 # jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
 # plot(env[burn:t_length], type = 'l')
@@ -132,10 +146,41 @@ plot(AR1_ma[burn:t_length], type = 'l')
 acf(AR1_ma)
 pacf(AR1_ma)
 
+# code from Eric Ward for prey sim with extremes
+# Code to simulate arima model with Student - t deviations
+n <- 100
+phi <- -0.1 # ar1 parameter
+theta <- -0.1 # ma1 parameter
+sd <- 0.1 # sd of deviations
+df <- 3  # degrees of freedom for Student-t
+
+# Generate Student-t errors scaled to match desired SD
+devs <- rt(n = n + 1, df = df)  # n+1 to handle devs[0]
+devs <- devs / sd(devs) * sd  # scale
+
+# Initialize
+x <- rep(0, n)
+x[1] <- devs[2]  # assume x[0] = 0, devs[1] used for lag
+
+# Simulate ARMA(1,1)
+for (t in 2:n) {
+  x[t] <- phi * x[t - 1] + devs[t - 1] + theta * devs[t]
+}
+plot(x, type = 'l')
+
+prey2 <- as_tibble(x) %>%
+  mutate(sd = sd(value),
+         extreme = if_else(value > 2*sd(value), TRUE, FALSE))
+table(prey2$extreme)
+
+# true black swan: simulate regime that is highly unlikely with diff distribution
+#  and amend "typical" ts
+
 # jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
 # plot(AR1_ma[burn:t_length], type = 'l')
 # dev.off()
 prey_p <- make_env_plots(env_index = AR1_ma, name = "Prey", burn = burn, t_length = t_length)
+prey_p <- make_env_plots(env_index = x, name = "Prey", burn = burn, t_length = t_length)
 
 
 # five: non-stationary (trend)
@@ -171,17 +216,17 @@ burn_to <- t_length - burn + 1
 random_walk <- tail(rw, n = burn_to)
 random_walk_lag <- tail(rw_lag, n = burn_to)
 
-rw_p <- make_env_plots(env_index = rw_base, name = "Random walk", burn = burn, t_length = t_length)
+rw_p <- make_env_plots(env_index = rw, name = "Random walk", burn = burn, t_length = t_length)
 rwlag_p <- make_env_plots(env_index = rw_lag, name = "Random walk lag", burn = burn, t_length = t_length)
 
 # put env data together
 
 env_data <- data.frame(#time = seq(from = 1, to = dat_length, by=1),
-  regime = env1_square[(burn + 1):t_length],
-  signal = env[(burn + 1):t_length],
-  climate = ts_ns1[(burn + 1):t_length],
-  pred = AR1_lg[(burn + 1):t_length],
-  prey = AR1_ma[(burn + 1):t_length],
+  regime = env1_square[(burn):t_length],
+  signal = env[(burn):t_length],
+  climate = ts_ns1[(burn):t_length],
+  pred = AR1_lg[(burn):t_length],
+  prey = AR1_ma[(burn):t_length],
   random_walk,
   random_walk_lag) #%>%
   # scale(center = TRUE, scale = TRUE)
@@ -303,7 +348,7 @@ input_data_sc <- env_data_sc %>%
                            to = lubridate::year(Sys.Date()),
                            by = 1))
 
-ggplot(input_data) +
+ggplot(input_data_sc) +
   geom_line(aes(x = sim_year, y = base_simple)) +
   geom_line(aes(x = sim_year, y = base_complex), linetype = "dashed") +
   # geom_line(aes(x = sim_year, y = base_complex_log), linetype = "dotted") +
