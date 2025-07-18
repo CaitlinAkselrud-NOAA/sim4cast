@@ -98,9 +98,9 @@ plot(env1_square$regime[burn:t_length], type = 'l')
 par(mfrow=c(3,1), mar = c(1,4,2,2))
 plot(env1_square[burn:t_length], type = 'l', main = "Regime", ylab = "Regime index", xlab = "", xaxt="n")
 par(mar = c(1,4,1,2))
-acf(env1_square, main = "", lag.max = length(env1_square[burn:t_length]), xlab = "", xaxt="n")
+acf(env1_square, main = "", lag.max = length(env1_square$regime[burn:t_length]), xlab = "", xaxt="n")
 par(mar = c(4,4,1,2))
-pacf(env1_square, main = "", lag.max = length(env1_square[burn:t_length]), xlab = "Year")
+pacf(env1_square, main = "", lag.max = length(env1_square$regime[burn:t_length]), xlab = "Year")
 #
 # jpeg(here::here("figures","env1_square.jpg"), width = 600, height = 350)
 # plot(env1_square[burn:t_length], type = 'l')
@@ -148,40 +148,51 @@ pacf(AR1_ma)
 
 # code from Eric Ward for prey sim with extremes
 # Code to simulate arima model with Student - t deviations
-n <- 100
-phi <- -0.1 # ar1 parameter
-theta <- -0.1 # ma1 parameter
-sd <- 0.1 # sd of deviations
-df <- 3  # degrees of freedom for Student-t
-
-# Generate Student-t errors scaled to match desired SD
-devs <- rt(n = n + 1, df = df)  # n+1 to handle devs[0]
-devs <- devs / sd(devs) * sd  # scale
-
-# Initialize
-x <- rep(0, n)
-x[1] <- devs[2]  # assume x[0] = 0, devs[1] used for lag
-
-# Simulate ARMA(1,1)
-for (t in 2:n) {
-  x[t] <- phi * x[t - 1] + devs[t - 1] + theta * devs[t]
-}
-plot(x, type = 'l')
-
-prey2 <- as_tibble(x) %>%
-  mutate(sd = sd(value),
-         extreme = if_else(value > 2*sd(value), TRUE, FALSE))
-table(prey2$extreme)
+# n <- 100
+# phi <- -0.1 # ar1 parameter
+# theta <- -0.1 # ma1 parameter
+# sd <- 0.1 # sd of deviations
+# df <- 3  # degrees of freedom for Student-t
+#
+# # Generate Student-t errors scaled to match desired SD
+# devs <- rt(n = n + 1, df = df)  # n+1 to handle devs[0]
+# devs <- devs / sd(devs) * sd  # scale
+#
+# # Initialize
+# x <- rep(0, n)
+# x[1] <- devs[2]  # assume x[0] = 0, devs[1] used for lag
+#
+# # Simulate ARMA(1,1)
+# for (t in 2:n) {
+#   x[t] <- phi * x[t - 1] + devs[t + 1] + theta * devs[t]
+# }
+# plot(x, type = 'l')
+#
+# prey2 <- as_tibble(x) %>%
+#   mutate(sd = sd(value),
+#          extreme = if_else(value > 2*sd(value), TRUE, FALSE))
+# table(prey2$extreme)
 
 # true black swan: simulate regime that is highly unlikely with diff distribution
 #  and amend "typical" ts
 
+# AR1_ma is the simulated prey time series
+# add black swan (bs) event(s)
+bs_regime <- rbinom(t_length, 1, 0.015)
+bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*3, sd = sd(AR1_ma)/2)
+bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*3, sd = sd(AR1_ma)/2)
+bimodal <- c(bs_lower, bs_upper)
+hist(bimodal)
+
+prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
+  mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma))
+
 # jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
 # plot(AR1_ma[burn:t_length], type = 'l')
 # dev.off()
-prey_p <- make_env_plots(env_index = AR1_ma, name = "Prey", burn = burn, t_length = t_length)
-prey_p <- make_env_plots(env_index = x, name = "Prey", burn = burn, t_length = t_length)
-
+# prey_p <- make_env_plots(env_index = AR1_ma, name = "Prey", burn = burn, t_length = t_length)
+# prey_p <- make_env_plots(env_index = x, name = "Prey", burn = burn, t_length = t_length)
+prey_p <- make_env_plots(env_index = prey_bs$new_prey, name = "Prey", burn = burn, t_length = t_length)
 
 # five: non-stationary (trend)
 set.seed(5678)
