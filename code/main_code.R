@@ -179,13 +179,21 @@ pacf(AR1_ma)
 # AR1_ma is the simulated prey time series
 # add black swan (bs) event(s)
 bs_regime <- rbinom(t_length, 1, 0.015)
-bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*3, sd = sd(AR1_ma)/2)
-bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*3, sd = sd(AR1_ma)/2)
+bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
+bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
 bimodal <- c(bs_lower, bs_upper)
+par(mfrow=c(2,1))
 hist(bimodal)
+hist(AR1_ma)
+hist(c(AR1_ma, bimodal))
 
 prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
   mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma))
+
+plot(AR1_ma, type = 'l', ylim = c(-0.6, 0.6))
+plot(prey_bs$new_prey, type = 'l')
+plot(AR1_ma[burn:t_length], type = 'l', ylim = c(-0.6, 0.6))
+plot(prey_bs$new_prey[burn:t_length], type = 'l')
 
 # devs <- rnorm(t_length, mean = c(mu1, mu2)[bs_regime],  sd = c(sd1, sd2)[bs_regime])
 
@@ -451,10 +459,10 @@ input_data_100 <- env_data_full %>%
 
 
 
-write_csv(input_data_sc_30, file = here::here("output", paste0("sim_input_data_sc_30", Sys.Date(),".csv")))
-write_csv(input_data_sc_100, file = here::here("output", paste0("sim_input_data_sc_100", Sys.Date(),".csv")))
-write_csv(input_data_30, file = here::here("output", paste0("sim_input_data_unscaled_30", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
-write_csv(input_data_100, file = here::here("output", paste0("sim_input_data_unscaled_100", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
+write_csv(input_data_sc_30, file = here::here("output", paste0("sim_input_data_sc_30_", Sys.Date(),".csv")))
+write_csv(input_data_sc_100, file = here::here("output", paste0("sim_input_data_sc_100_", Sys.Date(),".csv")))
+write_csv(input_data_30, file = here::here("output", paste0("sim_input_data_unscaled_30_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
+write_csv(input_data_100, file = here::here("output", paste0("sim_input_data_unscaled_100_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
 
 
 
