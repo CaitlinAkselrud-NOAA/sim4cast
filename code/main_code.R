@@ -187,6 +187,8 @@ hist(bimodal)
 prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
   mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma))
 
+# devs <- rnorm(t_length, mean = c(mu1, mu2)[bs_regime],  sd = c(sd1, sd2)[bs_regime])
+
 # jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
 # plot(AR1_ma[burn:t_length], type = 'l')
 # dev.off()
