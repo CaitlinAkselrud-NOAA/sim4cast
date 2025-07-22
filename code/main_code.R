@@ -180,8 +180,8 @@ rw_t <- rw <- rnorm(n = 100) #process
 
 # rw_targ <- rw_t +rw_t_1
 
-for(t in 2:100) {
-  rw_t[t] <- rw_t[t-1] + rw[t]
+for(k in 2:100) {
+  rw_t[k] <- rw_t[k-1] + rw[k]
 }
 
 # seven: create lagged rw
