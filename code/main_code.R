@@ -34,22 +34,6 @@ burn <- 100-dat_length +1
 # environmental -----------------------------------------------------------
 make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_length)
 {
-  # jpeg(here::here("figures", paste0(name,".jpg")), width = 600, height = 800)
-  #
-  # par(mfrow=c(3,1), mar = c(1,15,4,2), oma = c(1,1,1,1))
-  # plot(env_index[burn:t_length], type = 'l',
-  #      main = name, ylab = paste(name, "index"), xlab = "", xaxt="n",
-  #      cex.lab=2, cex.axis=2, cex.main=2)
-  # par(mar = c(1,15,1,2))
-  # acf(env_index, main = "", lag.max = length(env_index[burn:t_length]),
-  #     xlab = "", xaxt="n", cex.lab=2, cex.axis=2, cex.main=2)
-  # par(mar = c(10,15,1,2))
-  # pacf(env_index, main = "", lag.max = length(env_index[burn:t_length]),
-  #      xlab = "Year", cex.lab=2, cex.axis=2, cex.main=2)
-  #
-  # dev.off()
-
-
   index_p <- ggplot() +
     geom_line(aes(x = seq(from = 1, to = length(burn:t_length),
                           by = 1), y = env_index[burn:t_length]))+
@@ -70,15 +54,15 @@ make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_lengt
 
   p3 <- index_p + acf_p + pacf_p + plot_layout(ncol = 1)
 
-  ggsave(plot = p3, filename = paste0(name, "index.jpg"), path = here::here("figures"),
-         width = 6, height = 12)
+  # ggsave(plot = p3, filename = paste0(name, "index.jpg"), path = here::here("figures"),
+  #        width = 6, height = 12)
   return(p3)
 }
 
 all_100 <- NULL
 all_100_sc <- NULL
 
-for(iter in 1)
+for(iter in 1:100)
 {
 # one: periodic square
 # set.seed(1011)
@@ -86,8 +70,6 @@ period = 8
 env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
 env1_square <- env1_square %>%
   as_tibble() %>%
-  # mutate(regime = case_when(value == 0 ~ rnorm(sum(value == 0), mean = 3, sd = 1),
-  #                           value == 1 ~ rnorm(sum(value == 1), mean = 5, sd = 1)))
   mutate(
     regime = if_else(
       value == 0,
@@ -150,36 +132,6 @@ AR1_ma <- arima.sim(n = t_length, model = AR_ma, sd = 0.1)
 # acf(AR1_ma)
 # pacf(AR1_ma)
 
-# code from Eric Ward for prey sim with extremes
-# Code to simulate arima model with Student - t deviations
-# n <- 100
-# phi <- -0.1 # ar1 parameter
-# theta <- -0.1 # ma1 parameter
-# sd <- 0.1 # sd of deviations
-# df <- 3  # degrees of freedom for Student-t
-#
-# # Generate Student-t errors scaled to match desired SD
-# devs <- rt(n = n + 1, df = df)  # n+1 to handle devs[0]
-# devs <- devs / sd(devs) * sd  # scale
-#
-# # Initialize
-# x <- rep(0, n)
-# x[1] <- devs[2]  # assume x[0] = 0, devs[1] used for lag
-#
-# # Simulate ARMA(1,1)
-# for (t in 2:n) {
-#   x[t] <- phi * x[t - 1] + devs[t + 1] + theta * devs[t]
-# }
-# plot(x, type = 'l')
-#
-# prey2 <- as_tibble(x) %>%
-#   mutate(sd = sd(value),
-#          extreme = if_else(value > 2*sd(value), TRUE, FALSE))
-# table(prey2$extreme)
-
-# true black swan: simulate regime that is highly unlikely with diff distribution
-#  and amend "typical" ts
-
 # AR1_ma is the simulated prey time series
 # add black swan (bs) event(s)
 bs_regime <- rbinom(t_length, 1, 0.015)
@@ -225,22 +177,15 @@ climate_p <- make_env_plots(env_index = ts_ns1, name = "Climate", burn = burn, t
 
 # six: make random walk
 rw_t <- rw <- rnorm(n = 100) #process
-rw_t_1 <- lag(rw_t, n = 1) #prev time step
 
 # rw_targ <- rw_t +rw_t_1
 
-# for(t in 2:100) {
-#   rw[t] <- rw[t-1] + rw_base[t]
-# }
-#
-# # seven: create lagged rw
-# lag_step <- 2
-# rw_lag <- rw_base
-# rw_targ <- rw_base
-# for(t in (1+lag_step):100) {
-#   rw_lag[t] <- rw_lag[t-lag_step]
-#   rw_lag[t] <- rw_lag[t-lag_step] + rw_base[t]
-# }
+for(t in 2:100) {
+  rw_t[t] <- rw_t[t-1] + rw[t]
+}
+
+# seven: create lagged rw
+rw_t_1 <- lag(rw_t, n = 1) #prev time step
 
 # get correct time for rw's
 burn_to <- t_length - burn + 1
@@ -250,8 +195,10 @@ random_walk_lag <- tail(rw_t_1, n = burn_to)
 
 rw_p <- make_env_plots(env_index = rw_t, name = "Random walk", burn = burn, t_length = t_length)
 rwlag_p <- make_env_plots(env_index = rw_t_1, name = "Random walk lag", burn = burn, t_length = t_length)
-# twtarg_p <- make_env_plots(env_index = rw_targ, name = "Random walk lag", burn = burn, t_length = t_length)
-# put env data together
+
+# white noise
+wn <- rnorm(n=100)
+wn_p <- make_env_plots(env_index = wn, name = "White noise", burn = burn, t_length = t_length)
 
 # env indices- full -------------------------------------------------------
 
@@ -262,7 +209,8 @@ env_data_full <- data.frame(
   pred = AR1_lg,
   prey = prey_bs$new_prey,
   random_walk = tail(rw_t, n = length(env1_square$regime)),
-  random_walk_lag = tail(rw_t_1, n = length(env1_square$regime))) #%>%
+  random_walk_lag = tail(rw_t_1, n = length(env1_square$regime)),
+  white_noise = wn) #%>%
 # scale(center = TRUE, scale = TRUE)
 
 m_env_full <- t(env_data_full)
@@ -285,7 +233,7 @@ env_data <- env_data_full %>% slice_tail(n = dat_length)
 
 env_data_sc <- env_data_full_sc %>% slice_tail(n = dat_length)
 
-env_p <- regime_p | signal_p |climate_p |pred_p | prey_p |rw_p |rwlag_p
+env_p <- regime_p | signal_p |climate_p |pred_p | prey_p |rw_p |rwlag_p |wn_p
 ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -299,9 +247,10 @@ pred_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name
 prey_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = burn, t_length = t_length)
 rw_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = burn, t_length = t_length)
 rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = burn, t_length = t_length)
+wn_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = burn, t_length = t_length)
 
 
-env_p_30sc <- regime_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc |rwlag_p_30sc
+env_p_30sc <- regime_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc |rwlag_p_30sc | wn_p_30sc
 ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -315,9 +264,10 @@ pred_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), nam
 prey_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = 1, t_length = t_length)
 rw_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = 1, t_length = t_length)
 rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = 1, t_length = t_length)
+wn_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = 1, t_length = t_length)
 
 
-env_p_100sc <- regime_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc |rwlag_p_100sc
+env_p_100sc <- regime_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc |rwlag_p_100sc |wn_p_100sc
 ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -331,9 +281,9 @@ pred_p_100 <- make_env_plots(env_index = as.vector(env_data_full$pred), name = "
 prey_p_100 <- make_env_plots(env_index = as.vector(env_data_full$prey), name = "Prey", burn = 1, t_length = t_length)
 rw_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk), name = "Random walk", burn = 1, t_length = t_length)
 rwlag_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
+wn_p_100 <- make_env_plots(env_index = as.vector(env_data_full$white_noise), name = "White noise", burn = 1, t_length = t_length)
 
-
-env_p_100 <- regime_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100 |rwlag_p_100
+env_p_100 <- regime_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100 |rwlag_p_100 | wn_p_100
 ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -374,15 +324,17 @@ base_simple <- env_data_sc$random_walk +
   env_data_sc$climate  +
   env_data_sc$pred +
   env_data_sc$prey +
-  env_data_sc$random_walk_lag
+  env_data_sc$random_walk_lag +
+  env_data_sc$white_noise
 
-base_simple_100 <- env_data_full_sc$random_walk +
-  env_data_full_sc$regime +
-  env_data_full_sc$signal +
-  env_data_full_sc$climate  +
-  env_data_full_sc$pred +
-  env_data_full_sc$prey +
-  env_data_full_sc$random_walk_lag
+base_simple_100 <- rowSums( cbind(env_data_full_sc$random_walk,
+  env_data_full_sc$regime,
+  env_data_full_sc$signal,
+  env_data_full_sc$climate,
+  env_data_full_sc$pred,
+  env_data_full_sc$prey,
+  env_data_full_sc$random_walk_lag,
+  env_data_full_sc$white_noise), na.rm = TRUE)
 
 base_complex <- env_data_sc$random_walk *
   env_data_sc$regime *
@@ -390,7 +342,8 @@ base_complex <- env_data_sc$random_walk *
   env_data_sc$climate  *
   env_data_sc$pred *
   env_data_sc$prey *
-  env_data_sc$random_walk_lag
+  env_data_sc$random_walk_lag *
+  env_data_sc$white_noise
 
 base_complex_100 <- env_data_full_sc$random_walk *
   env_data_full_sc$regime *
@@ -398,20 +351,23 @@ base_complex_100 <- env_data_full_sc$random_walk *
   env_data_full_sc$climate  *
   env_data_full_sc$pred *
   env_data_full_sc$prey *
-  env_data_full_sc$random_walk_lag
+  env_data_full_sc$random_walk_lag *
+  env_data_full_sc$white_noise
+
 base_complex_100[1] <- env_data_full_sc$random_walk[1] *
   env_data_full_sc$regime[1] *
   env_data_full_sc$signal[1] *
   env_data_full_sc$climate[1]  *
   env_data_full_sc$pred[1] *
-  env_data_full_sc$prey[1]
+  env_data_full_sc$prey[1] *
+  env_data_full_sc$white_noise[1]
 
 
 base_complex_log <- log(as.vector(base_complex) + (1 - min(as.vector(base_complex), na.rm = T)))
 base_complex_log_100 <- log(as.vector(base_complex_100) + (1 - min(as.vector(base_complex_100), na.rm = T)))
 
 random_walk_target <- env_data_sc$random_walk + env_data_sc$random_walk_lag
-random_walk_target_100 <- env_data_full_sc$random_walk + env_data_full_sc$random_walk_lag
+random_walk_target_100 <- rowSums( cbind(env_data_full_sc$random_walk, env_data_full_sc$random_walk_lag), na.rm = T)
 
 # input_data_30 <- env_data %>%
 #   bind_cols(base_simple = as.vector(base_simple),
