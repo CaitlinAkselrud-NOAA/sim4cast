@@ -96,11 +96,14 @@ regime_p <- make_env_plots(env_index = env1_square$regime, name = "Regime", burn
 # two: amplified signal
 # env <- sin((2*pi*t)/(2/(t)))
 env <- sin(pi*(t^2))
+env <- env * rnorm(n = 100)
+
+
 # plot(env, type = 'l')
 # plot(env[burn:t_length], type = 'l')
 # acf(env)
 # pacf(env)
-# plot(diff(env))
+# plot(diff(env), type = 'l')
 
 # jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
 # plot(env[burn:t_length], type = 'l')
@@ -233,7 +236,7 @@ env_data <- env_data_full %>% slice_tail(n = dat_length)
 
 env_data_sc <- env_data_full_sc %>% slice_tail(n = dat_length)
 
-env_p <- regime_p | signal_p |climate_p |pred_p | prey_p |rw_p |rwlag_p |wn_p
+env_p <- regime_p | signal_p |climate_p |pred_p | prey_p |rw_p |wn_p #|rwlag_p
 ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -250,7 +253,7 @@ rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_wal
 wn_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = burn, t_length = t_length)
 
 
-env_p_30sc <- regime_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc |rwlag_p_30sc | wn_p_30sc
+env_p_30sc <- regime_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc  | wn_p_30sc #|rwlag_p_30sc
 ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -267,7 +270,7 @@ rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_wa
 wn_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = 1, t_length = t_length)
 
 
-env_p_100sc <- regime_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc |rwlag_p_100sc |wn_p_100sc
+env_p_100sc <- regime_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc  |wn_p_100sc #|rwlag_p_100sc
 ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
@@ -283,7 +286,7 @@ rw_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk), nam
 rwlag_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
 wn_p_100 <- make_env_plots(env_index = as.vector(env_data_full$white_noise), name = "White noise", burn = 1, t_length = t_length)
 
-env_p_100 <- regime_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100 |rwlag_p_100 | wn_p_100
+env_p_100 <- regime_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100  | wn_p_100 #|rwlag_p_100
 ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
