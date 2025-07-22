@@ -75,9 +75,13 @@ make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_lengt
   return(p3)
 }
 
+all_100 <- NULL
+all_100_sc <- NULL
 
+for(iter in 1)
+{
 # one: periodic square
-set.seed(1011)
+# set.seed(1011)
 period = 8
 env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
 env1_square <- env1_square %>%
@@ -90,9 +94,9 @@ env1_square <- env1_square %>%
       rnorm(n(), mean = 3, sd = 1), # n() gives the number of rows in the current group (here, all rows)
       rnorm(n(), mean = 5, sd = 1)))
 
-plot(env1_square$value, type = 'l')
-plot(env1_square$regime, type = 'l')
-plot(env1_square$regime[burn:t_length], type = 'l')
+# plot(env1_square$value, type = 'l')
+# plot(env1_square$regime, type = 'l')
+# plot(env1_square$regime[burn:t_length], type = 'l')
 
 
 # par(mfrow=c(3,1), mar = c(1,4,2,2))
@@ -110,11 +114,11 @@ regime_p <- make_env_plots(env_index = env1_square$regime, name = "Regime", burn
 # two: amplified signal
 # env <- sin((2*pi*t)/(2/(t)))
 env <- sin(pi*(t^2))
-plot(env, type = 'l')
-plot(env[burn:t_length], type = 'l')
-acf(env)
-pacf(env)
-plot(diff(env))
+# plot(env, type = 'l')
+# plot(env[burn:t_length], type = 'l')
+# acf(env)
+# pacf(env)
+# plot(diff(env))
 
 # jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
 # plot(env[burn:t_length], type = 'l')
@@ -122,13 +126,13 @@ plot(diff(env))
 signal_p <- make_env_plots(env_index = env, name = "Signal", burn = burn, t_length = t_length)
 
 # three: strong ar (feedback)
-set.seed(1234)
+# set.seed(1234)
 AR_lg <- list(order = c(1, 0, 0), ar = 0.9)
 AR1_lg <- arima.sim(n = t_length, model = AR_lg, sd = 0.1)
-plot(AR1_lg, type = 'l')
-plot(AR1_lg[burn:t_length], type = 'l')
-acf(AR1_lg)
-pacf(AR1_lg)
+# plot(AR1_lg, type = 'l')
+# plot(AR1_lg[burn:t_length], type = 'l')
+# acf(AR1_lg)
+# pacf(AR1_lg)
 
 # jpeg(here::here("figures","AR_lg.jpg"), width = 600, height = 350)
 # plot(AR1_lg[burn:t_length], type = 'l')
@@ -138,13 +142,13 @@ pred_p <- make_env_plots(env_index = AR1_lg, name = "Predator", burn = burn, t_l
 
 # four: ar and ma
 # cps-like/ prey index that's more env driven
-set.seed(9876)
+# set.seed(9876)
 AR_ma <- list(order = c(1, 0, 1), ar = -0.1, ma = -0.1)
 AR1_ma <- arima.sim(n = t_length, model = AR_ma, sd = 0.1)
-plot(AR1_ma, type = 'l')
-plot(AR1_ma[burn:t_length], type = 'l')
-acf(AR1_ma)
-pacf(AR1_ma)
+# plot(AR1_ma, type = 'l')
+# plot(AR1_ma[burn:t_length], type = 'l')
+# acf(AR1_ma)
+# pacf(AR1_ma)
 
 # code from Eric Ward for prey sim with extremes
 # Code to simulate arima model with Student - t deviations
@@ -182,18 +186,18 @@ bs_regime <- rbinom(t_length, 1, 0.015)
 bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
 bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
 bimodal <- c(bs_lower, bs_upper)
-par(mfrow=c(2,1))
-hist(bimodal)
-hist(AR1_ma)
-hist(c(AR1_ma, bimodal))
+# par(mfrow=c(2,1))
+# hist(bimodal)
+# hist(AR1_ma)
+# hist(c(AR1_ma, bimodal))
 
 prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
   mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma))
 
-plot(AR1_ma, type = 'l', ylim = c(-0.6, 0.6))
-plot(prey_bs$new_prey, type = 'l')
-plot(AR1_ma[burn:t_length], type = 'l', ylim = c(-0.6, 0.6))
-plot(prey_bs$new_prey[burn:t_length], type = 'l')
+# plot(AR1_ma, type = 'l', ylim = c(-0.6, 0.6))
+# plot(prey_bs$new_prey, type = 'l')
+# plot(AR1_ma[burn:t_length], type = 'l', ylim = c(-0.6, 0.6))
+# plot(prey_bs$new_prey[burn:t_length], type = 'l')
 
 # devs <- rnorm(t_length, mean = c(mu1, mu2)[bs_regime],  sd = c(sd1, sd2)[bs_regime])
 
@@ -205,13 +209,13 @@ plot(prey_bs$new_prey[burn:t_length], type = 'l')
 prey_p <- make_env_plots(env_index = prey_bs$new_prey, name = "Prey", burn = burn, t_length = t_length)
 
 # five: non-stationary (trend)
-set.seed(5678)
+# set.seed(5678)
 ts_ns <- list(order = c(1, 1, 0), ar = -0.5)
 ts_ns1 <- arima.sim(n = t_length, model = ts_ns, sd = 0.1) *-1
-plot(ts_ns1, type = 'l')
-plot(ts_ns1[burn:t_length], type = 'l')
-acf(ts_ns1)
-pacf(ts_ns1)
+# plot(ts_ns1, type = 'l')
+# plot(ts_ns1[burn:t_length], type = 'l')
+# acf(ts_ns1)
+# pacf(ts_ns1)
 
 # jpeg(here::here("figures","ts_ns1.jpg"), width = 600, height = 350)
 # plot(ts_ns1[burn:t_length], type = 'l')
@@ -282,55 +286,55 @@ env_data <- env_data_full %>% slice_tail(n = dat_length)
 env_data_sc <- env_data_full_sc %>% slice_tail(n = dat_length)
 
 env_p <- regime_p | signal_p |climate_p |pred_p | prey_p |rw_p |rwlag_p
-ggsave(plot = env_p, filename = "all_env.jpg", path = here::here("figures"),
+ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
 
 # make more plots ---------------------------------------------------------
 
-regime_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime), name = "Random walk", burn = burn, t_length = t_length)
-signal_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Random walk", burn = burn, t_length = t_length)
-climate_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Random walk", burn = burn, t_length = t_length)
-pred_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Random walk", burn = burn, t_length = t_length)
-prey_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Random walk", burn = burn, t_length = t_length)
+regime_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime), name = "Regime", burn = burn, t_length = t_length)
+signal_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = burn, t_length = t_length)
+climate_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = burn, t_length = t_length)
+pred_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = burn, t_length = t_length)
+prey_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = burn, t_length = t_length)
 rw_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = burn, t_length = t_length)
-rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk", burn = burn, t_length = t_length)
+rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = burn, t_length = t_length)
 
 
 env_p_30sc <- regime_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc |rwlag_p_30sc
-ggsave(plot = env_p_30sc, filename = "all_env_sc.jpg", path = here::here("figures"),
+ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
 
 # 100_sc
 
-regime_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime), name = "Random walk", burn = 1, t_length = t_length)
-signal_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Random walk", burn = 1, t_length = t_length)
-climate_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Random walk", burn = 1, t_length = t_length)
-pred_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Random walk", burn = 1, t_length = t_length)
-prey_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Random walk", burn = 1, t_length = t_length)
+regime_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime), name = "Regime", burn = 1, t_length = t_length)
+signal_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = 1, t_length = t_length)
+climate_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = 1, t_length = t_length)
+pred_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = 1, t_length = t_length)
+prey_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = 1, t_length = t_length)
 rw_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = 1, t_length = t_length)
-rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
+rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = 1, t_length = t_length)
 
 
 env_p_100sc <- regime_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc |rwlag_p_100sc
-ggsave(plot = env_p_100sc, filename = "all_env_100sc.jpg", path = here::here("figures"),
+ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
 
 # 100
 
-regime_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime), name = "Random walk", burn = 1, t_length = t_length)
-signal_p_100 <- make_env_plots(env_index = as.vector(env_data_full$signal), name = "Random walk", burn = 1, t_length = t_length)
-climate_p_100 <- make_env_plots(env_index = as.vector(env_data_full$climate), name = "Random walk", burn = 1, t_length = t_length)
-pred_p_100 <- make_env_plots(env_index = as.vector(env_data_full$pred), name = "Random walk", burn = 1, t_length = t_length)
-prey_p_100 <- make_env_plots(env_index = as.vector(env_data_full$prey), name = "Random walk", burn = 1, t_length = t_length)
+regime_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime), name = "Regime", burn = 1, t_length = t_length)
+signal_p_100 <- make_env_plots(env_index = as.vector(env_data_full$signal), name = "Signal", burn = 1, t_length = t_length)
+climate_p_100 <- make_env_plots(env_index = as.vector(env_data_full$climate), name = "Climate", burn = 1, t_length = t_length)
+pred_p_100 <- make_env_plots(env_index = as.vector(env_data_full$pred), name = "Predator", burn = 1, t_length = t_length)
+prey_p_100 <- make_env_plots(env_index = as.vector(env_data_full$prey), name = "Prey", burn = 1, t_length = t_length)
 rw_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk), name = "Random walk", burn = 1, t_length = t_length)
 rwlag_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
 
 
 env_p_100 <- regime_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100 |rwlag_p_100
-ggsave(plot = env_p_100, filename = "all_env_100.jpg", path = here::here("figures"),
+ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
 # sim notes ---------------------------------------------------------------
@@ -459,11 +463,18 @@ input_data_100 <- env_data_full %>%
 
 
 
-write_csv(input_data_sc_30, file = here::here("output", paste0("sim_input_data_sc_30_", Sys.Date(),".csv")))
-write_csv(input_data_sc_100, file = here::here("output", paste0("sim_input_data_sc_100_", Sys.Date(),".csv")))
-write_csv(input_data_30, file = here::here("output", paste0("sim_input_data_unscaled_30_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
-write_csv(input_data_100, file = here::here("output", paste0("sim_input_data_unscaled_100_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
+write_csv(input_data_sc_30, file = here::here("output", paste0(iter, "_sim_input_data_sc_30_", Sys.Date(),".csv")))
+write_csv(input_data_sc_100, file = here::here("output", paste0(iter, "_sim_input_data_sc_100_", Sys.Date(),".csv")))
+write_csv(input_data_30, file = here::here("output", paste0(iter, "_sim_input_data_unscaled_30_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
+write_csv(input_data_100, file = here::here("output", paste0(iter, "_sim_input_data_unscaled_100_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
+
+all_100 <- bind_rows(all_100, input_data_100)
+all_100_sc <- bind_rows(all_100_sc, input_data_sc_100)
 
 
+}
+
+write_csv(all_100, file = here::here("output", paste0("complete_sim_input_data_unscaled_100_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
+write_csv(all_100_sc, file = here::here("output", paste0("complete_sim_input_data_scaled_100_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
 
 # also create example with multicollinear factors
