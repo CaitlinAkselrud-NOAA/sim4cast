@@ -253,63 +253,6 @@ env_data <- env_data_full %>% slice_tail(n = dat_length)
 
 env_data_sc <- env_data_full_sc %>% slice_tail(n = dat_length)
 
-# env_p <- regime_p | regime2_p | signal_p |climate_p |pred_p | prey_p |rw_p |wn_p #|rwlag_p
-# ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
-       # width = 21, height = 9)
-
-
-# make more plots ---------------------------------------------------------
-
-# regimes_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_short), name = "Regime short", burn = burn, t_length = t_length)
-# regimel_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_long), name = "Regime long", burn = burn, t_length = t_length)
-# signal_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = burn, t_length = t_length)
-# climate_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = burn, t_length = t_length)
-# pred_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = burn, t_length = t_length)
-# prey_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = burn, t_length = t_length)
-# rw_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = burn, t_length = t_length)
-# rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = burn, t_length = t_length)
-# wn_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = burn, t_length = t_length)
-#
-#
-# env_p_30sc <- regimes_p_30sc | regimel_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc  | wn_p_30sc #|rwlag_p_30sc
-# ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
-#        width = 21, height = 9)
-#
-#
-# # 100_sc
-#
-# regimes_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_short), name = "Regime short", burn = 1, t_length = t_length)
-# regimel_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_long), name = "Regime long", burn = 1, t_length = t_length)
-# signal_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = 1, t_length = t_length)
-# climate_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = 1, t_length = t_length)
-# pred_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = 1, t_length = t_length)
-# prey_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = 1, t_length = t_length)
-# rw_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = 1, t_length = t_length)
-# rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = 1, t_length = t_length)
-# wn_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = 1, t_length = t_length)
-#
-#
-# env_p_100sc <- regimes_p_100sc | regimel_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc  |wn_p_100sc #|rwlag_p_100sc
-# ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
-#        width = 21, height = 9)
-#
-#
-# # 100
-#
-# regimes_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime_short), name = "Regime short", burn = 1, t_length = t_length)
-# regimel_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime_long), name = "Regime long", burn = 1, t_length = t_length)
-# signal_p_100 <- make_env_plots(env_index = as.vector(env_data_full$signal), name = "Signal", burn = 1, t_length = t_length)
-# climate_p_100 <- make_env_plots(env_index = as.vector(env_data_full$climate), name = "Climate", burn = 1, t_length = t_length)
-# pred_p_100 <- make_env_plots(env_index = as.vector(env_data_full$pred), name = "Predator", burn = 1, t_length = t_length)
-# prey_p_100 <- make_env_plots(env_index = as.vector(env_data_full$prey), name = "Prey", burn = 1, t_length = t_length)
-# rw_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk), name = "Random walk", burn = 1, t_length = t_length)
-# rwlag_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
-# wn_p_100 <- make_env_plots(env_index = as.vector(env_data_full$white_noise), name = "White noise", burn = 1, t_length = t_length)
-#
-# env_p_100 <- regimes_p_100 | regimel_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100  | wn_p_100 #|rwlag_p_100
-# ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
-#        width = 21, height = 9)
-
 # sim notes ---------------------------------------------------------------
 
 # simple: regime + signal + climate + pred + prey
@@ -463,24 +406,70 @@ write_csv(all_100_sc, file = here::here("output", paste0("complete_sim_input_dat
 
 # also create example with multicollinear factors
 
-# check distributions -----------------------------------------------------
+# check results -----------------------------------------------------
 
-ts <- read_csv(here::here("output", "complete_sim_input_data_unscaled_100_2025-08-31.csv"))
-# sd(ts$regime_short)
-# sd(ts$regime_long)
-# sd(ts$signal)
-# sd(ts$climate)
-# sd(ts$pred)
-# sd(ts$prey)
-# sd(ts$random_walk)
-# sd(ts$white_noise)
-#
-ts2 <- read_csv(here::here("output", "complete_sim_input_data_scaled_100_2025-08-31.csv"))
-# sd(ts2$regime_short)
-# sd(ts2$regime_long)
-# sd(ts2$signal)
-# sd(ts2$climate)
-# sd(ts2$pred)
-# sd(ts2$prey)
-# sd(ts2$random_walk)
-# sd(ts2$white_noise)
+all_100 <- read_csv(here::here("output", "complete_sim_input_data_unscaled_100_2025-08-31.csv"))
+
+all_100_sc <- read_csv(here::here("output", "complete_sim_input_data_scaled_100_2025-08-31.csv"))
+
+# make plots ---------------------------------------------------------
+regime_p <- make_env_plots(env_index = as.vector(all_100$regime_short), name = "Regime short", burn = burn, t_length = t_length)
+regime2_p <- make_env_plots(env_index = as.vector(all_100$regime_long), name = "Regime long", burn = burn, t_length = t_length)
+signal_p <- make_env_plots(env_index = as.vector(all_100$signal), name = "Signal", burn = burn, t_length = t_length)
+climate_p <- make_env_plots(env_index = as.vector(all_100$climate), name = "Climate", burn = burn, t_length = t_length)
+pred_p <- make_env_plots(env_index = as.vector(all_100$pred), name = "Predator", burn = burn, t_length = t_length)
+prey_p <- make_env_plots(env_index = as.vector(all_100$prey), name = "Prey", burn = burn, t_length = t_length)
+rw_p <- make_env_plots(env_index = as.vector(all_100$random_walk), name = "Random walk", burn = burn, t_length = t_length)
+wn_p <- make_env_plots(env_index = as.vector(all_100$white_noise), name = "White noise", burn = burn, t_length = t_length)
+
+env_p <- regime_p | regime2_p | signal_p |climate_p |pred_p | prey_p |rw_p |wn_p #|rwlag_p
+ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
+width = 21, height = 9)
+
+regimes_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$regime_short), name = "Regime short", burn = burn, t_length = t_length)
+regimel_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$regime_long), name = "Regime long", burn = burn, t_length = t_length)
+signal_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$signal), name = "Signal", burn = burn, t_length = t_length)
+climate_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$climate), name = "Climate", burn = burn, t_length = t_length)
+pred_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$pred), name = "Predator", burn = burn, t_length = t_length)
+prey_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$prey), name = "Prey", burn = burn, t_length = t_length)
+rw_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$random_walk), name = "Random walk", burn = burn, t_length = t_length)
+wn_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$white_noise), name = "White noise", burn = burn, t_length = t_length)
+
+
+env_p_30sc <- regimes_p_30sc | regimel_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc  | wn_p_30sc #|rwlag_p_30sc
+ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
+       width = 21, height = 9)
+
+
+# 100_sc
+
+regimes_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$regime_short), name = "Regime short", burn = 1, t_length = t_length)
+regimel_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$regime_long), name = "Regime long", burn = 1, t_length = t_length)
+signal_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$signal), name = "Signal", burn = 1, t_length = t_length)
+climate_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$climate), name = "Climate", burn = 1, t_length = t_length)
+pred_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$pred), name = "Predator", burn = 1, t_length = t_length)
+prey_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$prey), name = "Prey", burn = 1, t_length = t_length)
+rw_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$random_walk), name = "Random walk", burn = 1, t_length = t_length)
+wn_p_100sc <- make_env_plots(env_index = as.vector(all_100_sc$white_noise), name = "White noise", burn = 1, t_length = t_length)
+
+
+env_p_100sc <- regimes_p_100sc | regimel_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc  |wn_p_100sc #|rwlag_p_100sc
+ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
+       width = 21, height = 9)
+
+
+# 100
+
+regimes_p_100 <- make_env_plots(env_index = as.vector(all_100$regime_short), name = "Regime short", burn = 1, t_length = t_length)
+regimel_p_100 <- make_env_plots(env_index = as.vector(all_100$regime_long), name = "Regime long", burn = 1, t_length = t_length)
+signal_p_100 <- make_env_plots(env_index = as.vector(all_100$signal), name = "Signal", burn = 1, t_length = t_length)
+climate_p_100 <- make_env_plots(env_index = as.vector(all_100$climate), name = "Climate", burn = 1, t_length = t_length)
+pred_p_100 <- make_env_plots(env_index = as.vector(all_100$pred), name = "Predator", burn = 1, t_length = t_length)
+prey_p_100 <- make_env_plots(env_index = as.vector(all_100$prey), name = "Prey", burn = 1, t_length = t_length)
+rw_p_100 <- make_env_plots(env_index = as.vector(all_100$random_walk), name = "Random walk", burn = 1, t_length = t_length)
+wn_p_100 <- make_env_plots(env_index = as.vector(all_100$white_noise), name = "White noise", burn = 1, t_length = t_length)
+
+env_p_100 <- regimes_p_100 | regimel_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100  | wn_p_100 #|rwlag_p_100
+ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
+       width = 21, height = 9)
+
