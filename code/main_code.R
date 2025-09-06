@@ -424,7 +424,7 @@ wn_p <- make_env_plots(env_index = as.vector(all_100$white_noise), name = "White
 
 env_p <- regime_p | regime2_p | signal_p |climate_p |pred_p | prey_p |rw_p |wn_p #|rwlag_p
 ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
-width = 21, height = 9)
+       width = 21, height = 9)
 
 regimes_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$regime_short), name = "Regime short", burn = burn, t_length = t_length)
 regimel_p_30sc <- make_env_plots(env_index = as.vector(all_100_sc$regime_long), name = "Regime long", burn = burn, t_length = t_length)
@@ -473,3 +473,81 @@ env_p_100 <- regimes_p_100 | regimel_p_100 | signal_p_100 |climate_p_100 |pred_p
 ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
        width = 21, height = 9)
 
+
+# * overall_plots ---------------------------------------------------------
+
+ts <- all_100 %>%
+  mutate(set = rep(1:100, each = 100))
+
+ts_long <- ts %>%
+  dplyr::select(-random_walk_lag, -base_simple, -base_complex, -base_complex_log,
+                -random_walk_target_100) %>%
+  dplyr::rename("Short regime" = regime_short,
+                "Long regime" = regime_long,
+                "Increasing cycle"  = signal,
+                "Environmental trend" = climate ,
+                "Autocorrelated process" = pred  ,
+                "Black swan events" = prey,
+                "Random Walk" = random_walk ,
+                "White noise" = white_noise) %>%
+  pivot_longer(cols = -c(sim_year, set),
+               names_to = "Index",
+               values_to = "Value")
+
+metric_order <- c("Short regime",
+                  "Long regime",
+                  "Increasing cycle",
+                  "Environmental trend",
+                  "Autocorrelated process",
+                  "Black swan events",
+                  "Random Walk",
+                  "White noise")
+num_metrics <- length(metric_order)
+
+plot_list <- list()
+
+for (i in 1:num_metrics) {
+  current_metric <- metric_order[i] # Get metric from our ordered list
+
+  # Filter data for the current metric
+  plot_data <- filter(ts_long, Index == current_metric)
+  highlight_data <- dplyr::filter(plot_data, set %in% c(1, 50, 100))
+
+  # Create the base plot for the current metric
+  p <- ggplot(plot_data, aes(x = sim_year, y = Value , group = set)) +
+    geom_line(color = "grey", alpha = 0.5) +
+    geom_line(data = highlight_data,  aes(linetype = as.factor(set)),
+              color = "black", linewidth = 0.25) +
+    # facet_wrap(~ Index, ncol = 1, scales = "free_y") +
+    theme_void()+
+    labs(title = current_metric) +
+    theme(
+      legend.position = "none",
+      # Add back and rotate the y-axis title to mimic faceted plots
+      plot.title = element_text(
+        color = "black", size = 11, hjust = 0.5 # Add some space
+      ),
+      plot.margin = margin(t = 0, r = 0, b = 0, l = 0, unit = "pt")
+    )
+
+  # If it's the LAST plot, add back the x-axis elements
+  if (i == num_metrics) {
+    p <- p +
+      labs(x = "Year") + # Add the x-axis label
+      theme(
+        axis.line.x = element_line(color = "black"),   # Add x-axis line
+        axis.text.x = element_text(color = "black"),   # Add x-axis text
+        # axis.ticks.x = element_line(color = "black"),  # Add x-axis ticks
+        axis.title.x = element_text(color = "black", margin = margin(t = 5)) # Add x-axis title
+      )
+  }
+
+  # Add the generated plot to our list
+  plot_list[[i]] <- p
+}
+
+# Use patchwork to combine all plots in the list into a single column
+combined_plot <- wrap_plots(plot_list, ncol = 1)
+
+ggsave("spaghetti_plot.png", plot = combined_plot, width = 8, height = 10,
+       path = here::here("figures"))
