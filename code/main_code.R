@@ -2,7 +2,7 @@
 # author(s): caitlin allen akselrud
 # contact: caitlin.allen_akserud@noaa.gov
 # date created: 13.07.2023
-# version: 1.0
+# version: 2.0 - standardized process error
 
 # libraries ---------------------------------------------------------------
 library(tidyverse)
@@ -16,236 +16,6 @@ library(cowplot)
 library(patchwork)
 
 # functions ---------------------------------------------------------------
-
-
-# folders -----------------------------------------------------------------
-
-write.dir <- here::here("output") # otherwise will be saved in working directory
-dir.create(write.dir, showWarnings = FALSE)
-# setwd(write.dir)
-
-# settings and fixed values -----------------------------------------------
-
-t_length <- 100
-t <- 1:t_length
-dat_length <- 30
-burn <- 100-dat_length +1
-
-
-# get corrected sigma values ----------------------------------------------
-n_sim <- 10000
-
-rs_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # regime short
-  # one: periodic square
-  # set.seed(1011)
-  period = 8
-  env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
-  env1_square <- env1_square %>%
-    as_tibble() %>%
-    mutate(
-      # regime = if_else(
-      #   value == 0,
-      #   rnorm(n(), mean = 3, sd = 1), # n() gives the number of rows in the current group (here, all rows)
-      #   rnorm(n(), mean = 5, sd = 1)),
-      mean = if_else(
-        value == 0,3,5),
-      dev = rnorm(n(), mean = 0, sd = 1),
-      regime = mean+dev)
-
-  sigma0 <- env1_square %>%
-    dplyr::filter(value == 0) %>%
-    summarize(sigma0 = sd(regime))
-  sigma1 <- env1_square %>%
-    dplyr::filter(value == 1) %>%
-    summarize(sigma1 = sd(regime))
-
-  #   sd(env1_square$regime)
-  # new_dev <- env1_square$regime/sigma
-  #
-  # test <- env1_square %>%
-  #   bind_cols(new_dev = new_dev) %>%
-  #   mutate(regime_corr = mean+new_dev)
-  #
-  # plot(test$regime_corr, type = 'l')
-  # #
-  #
-  # env1_square <- env1_square %>%
-  #   mutate(reg_corr = )
-  #
-  # env1_square$reg_corr <- sd(r/sd(env1_square$regime)) + env1_square$mean
-  #
-  # sdd <- sd(env1_square$regime)
-  # # rs_dist[iter] <- sdd
-  # env1_square$regime <- env1_square$dev/sdd + env1_square$mean
-  # sd(env1_square$dev/sdd)
-  #
-  # env1_square %>% dplyr::filter(value ==1) %>%
-  #   summarize(sd(dev/sdd))
-  #
-}
-# rs_corr <- 1/mean(rs_dist)
-
-rl_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # regime 2 (long)
-  period = 40
-  env2_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
-  env2_square <- env2_square %>%
-    as_tibble() %>%
-    mutate(
-      regime = if_else(
-        value == 0,
-        rnorm(n(), mean = 3, sd = 1), # n() gives the number of rows in the current group (here, all rows)
-        rnorm(n(), mean = 5, sd = 1)))
-
-  sdd <- sd(env2_square$regime)
-  rl_dist[iter] <- sdd
-}
-# rl_corr <- 1/mean(rl_dist)
-
-s_dist <- rep(0,n_sim)
-s_dist2 <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # signal
-  # two: amplified signal
-  # env <- sin((2*pi*t)/(2/(t)))
-  env_base <- (2*(sin(pi*(t^2))))/(sd(sin(pi*(t^2))))
-  env <- env_base + rnorm(n = 100, mean = 0, sd = 1)
-  # plot(env, type = 'l')
-
-  sigma <- sd(env) - sd(env_base)
-  env2 <- env_base + rnorm(n = 100, mean = 0, sd = (1/sigma))
-  sigma2 <- sd(env2) - sd(env_base)
-  # plot(env2, type = 'l')
-
-  s_dist[iter] <- sigma
-  s_dist2[iter] <- sigma2
-}
-hist(s_dist)
-hist(s_dists)
-
-s_corr <- 1/mean(s_dist)
-
-ap_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # autocorrelated process
-  # three: strong ar (feedback)
-  # set.seed(1234)
-  AR_lg <- list(order = c(1, 0, 0), ar = 0.9)
-  AR1_lg <- arima.sim(n = t_length, model = AR_lg, sd = 1)
-  # plot(AR1_lg, type = 'l')
-
-  sdd <- sd(AR1_lg)
-
-  ap_dist[iter] <- sdd
-
-}
-ap_corr <- 1/mean(ap_dist)
-
-bs_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # black swan
-
-  # four: ar and ma
-  # cps-like/ prey index that's more env driven
-  # set.seed(9876)
-  AR_ma <- list(order = c(1, 0, 1), ar = -0.1, ma = -0.1)
-  AR1_ma <- arima.sim(n = t_length, model = AR_ma, sd = 1)
-
-  # AR1_ma is the simulated prey time series
-  # add black swan (bs) event(s)
-  bs_regime <- rbinom(t_length, 1, 0.015)
-  bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
-  bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
-  bimodal <- c(bs_lower, bs_upper)
-
-  prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
-    mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma))
-
-  sdd <- sd(AR1_ma)
-  bs_dist[iter] <- sdd
-}
-bs_corr <- 1/mean(bs_dist)
-
-et_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # environmental trend
-  # five: non-stationary (trend)
-  # set.seed(5678)
-  ts_ns <- list(order = c(1, 1, 0), ar = -0.5)
-  ts_ns1 <- arima.sim(n = t_length, model = ts_ns, sd = 1) *-1
-
-  sdd <- sd(ts_ns1)
-  et_dist[iter] <- sdd
-}
-et_corr <- 1/mean(et_dist)
-
-
-rw_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-  # RW
-  # six: make random walk
-  rw_t <- rw <- rnorm(n = 100, sd = 1) #process
-
-  # rw_targ <- rw_t +rw_t_1
-
-  for(k in 2:100) {
-    rw_t[k] <- rw_t[k-1] + rw[k]
-  }
-  sigma <- sd(rw_t)
-
-  rw_t <- rw <- rnorm(n = 100, sd = 1/sigma) #process
-
-  # rw_targ <- rw_t +rw_t_1
-
-  for(k in 2:100) {
-    rw_t[k] <- rw_t[k-1] + rw[k]
-  }
-  sd(rw_t)
-  rw_dist[iter] <- sdd
-}
-rw_corr <- 1/mean(rw_dist)
-
-wn_dist <- rep(0,n_sim)
-for(iter in 1:n_sim)
-{
-
-  # white noise
-  wn <- rnorm(n=100)
-  sdd <- sd(wn)
-  wn_dist[iter] <- sdd
-}
-wn_corr <- 1/mean(wn_dist)
-
-
-corrs <- c(rs_corr = rs_corr,
-           rl_corr = rl_corr,
-           s_corr = s_corr,
-           ap_corr = ap_corr,
-           bs_corr = bs_corr,
-           et_corr = et_corr,
-           rw_corr = rw_corr,
-           wn_corr = wn_corr)
-# write(x = as.table(corrs), file = here::here("output", "sigma_correction_values.txt"))
-write(x = paste("rs_corr", rs_corr, "\n",
-            "rl_corr", rl_corr,"\n",
-            "s_corr", s_corr,"\n",
-            "ap_corr", ap_corr,"\n",
-            "bs_corr", bs_corr,"\n",
-            "et_corr", et_corr,"\n",
-            "rw_corr", rw_corr,"\n",
-            "wn_corr", wn_corr), file = here::here("output", "sigma_correction_values.txt"))
-
-# environmental -----------------------------------------------------------
 make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_length)
 {
   index_p <- ggplot() +
@@ -273,168 +43,181 @@ make_env_plots <- function(env_index, name = "", burn = burn, t_length = t_lengt
   return(p3)
 }
 
+# folders -----------------------------------------------------------------
+
+write.dir <- here::here("output") # otherwise will be saved in working directory
+dir.create(write.dir, showWarnings = FALSE)
+# setwd(write.dir)
+
+# settings and fixed values -----------------------------------------------
+
+t_length <- 100
+t <- 1:t_length
+dat_length <- 30
+burn <- 100-dat_length +1
+
+# environmental -----------------------------------------------------------
+
 all_100 <- NULL
 all_100_sc <- NULL
 
 for(iter in 1:100)
 {
-# one: periodic square
-# set.seed(1011)
-period = 8
-env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
-env1_square <- env1_square %>%
-  as_tibble() %>%
-  mutate(
-    regime = if_else(
-      value == 0,
-      rnorm(n(), mean = 3, sd = 1*rs_corr), # n() gives the number of rows in the current group (here, all rows)
-      rnorm(n(), mean = 5, sd = 1*rs_corr)))
+  # generate ts -------------------------------------------------------------
 
-# plot(env1_square$value, type = 'l')
-# plot(env1_square$regime, type = 'l')
-# plot(env1_square$regime[burn:t_length], type = 'l')
+  # * scaled devs -----------------------------------------------------------
+
+  dev <- rnorm(n = t_length, mean = 0, sd = 1) # raw devs
+  scaled_dev <-  dev / sd(dev)
+  # sd(scaled_dev)
+
+  # hist(scaled_dev)
+  # hist(dev)
+  # * regime short ----------------------------------------------------------
+
+  # regime short
+  # one: periodic square
+  # set.seed(1011)
+  period = 8
+  env1_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
+  env1_square <- env1_square %>%
+    as_tibble() %>%
+    bind_cols(scaled_dev = scaled_dev) %>%
+    mutate(
+      mean = if_else(
+        value == 0,3,5),
+      regime = mean+scaled_dev)
+
+  # sigma0 <- env1_square %>%
+  #   dplyr::filter(value == 0) %>%
+  #   summarize(sigma0 = sd(regime))
+  # sigma1 <- env1_square %>%
+  #   dplyr::filter(value == 1) %>%
+  #   summarize(sigma1 = sd(regime))
+
+  # sd ~1 for each regime, using scaled devs
+
+  # * regime long -----------------------------------------------------------
+
+  period = 40
+  env2_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
+  env2_square <- env2_square %>%
+    as_tibble() %>%
+    bind_cols(scaled_dev = scaled_dev) %>%
+    mutate(
+      mean = if_else(
+        value == 0,3,5),
+      regime = mean+scaled_dev)
+
+  # sigma0 <- env2_square %>%
+  #   dplyr::filter(value == 0) %>%
+  #   summarize(sigma0 = sd(regime))
+  # sigma1 <- env2_square %>%
+  #   dplyr::filter(value == 1) %>%
+  #   summarize(sigma1 = sd(regime))
+
+  # sd ~1 for each regime, using scaled devs
+
+  # * increasing cycle ------------------------------------------------------
+
+  # signal
+  # two: amplified signal
+  # env <- sin((2*pi*t)/(2/(t)))
+  env_base <- (2*(sin(pi*(t^2))))/(sd(sin(pi*(t^2))))
+  env <- env_base + scaled_dev
+
+  # sd(env_base)
+  # sd(env) #ok b/c most sd comes from underlying process
+
+  # proof of concept
+  # check 10k sims
+  # n_sim = 10000
+  # as_dist <- rep(0,n_sim)
+  # as_table <- matrix(nrow = n_sim, ncol = length(env))
+  # for(iter in 1:n_sim)
+  # {
+  #   env_base <- (2*(sin(pi*(t^2))))/(sd(sin(pi*(t^2))))
+  #   devs_as <- rnorm(n = length(env_base), mean = 0, sd = 1)
+  #   scaled_dev_as <- devs_as / sd(devs_as)
+  #   env <- env_base + scaled_dev_as
+  #
+  #   as_dist[iter] <- sd(env)
+  #   as_table[iter,] <- env
+  # }
+  #
+  # annual_sd <- as_table %>% as_tibble %>%
+  #   summarise(across(where(is.numeric), sd))
+
+  # range(annual_sd)
+  # hist(as.vector(annual_sd) %>% unlist)
+  # plot(env, type = 'l')
+
+  # argument: because the point is non-stationary variance,
+  #   we are showing that the process error for each year is ~1
+
+  # * environmental trend ---------------------------------------------------
+
+  # environmental trend
+  # five: non-stationary (trend)
+
+  phi <-  -0.5
+  # corrected_sd <- sqrt(1-(phi^2))
+
+  ts_ns <- list(order = c(1, 1, 0), ar = phi)
+  ts_ns1 <- arima.sim(n = t_length, model = ts_ns, innov = scaled_dev) #'innov' setting assigns pre-fix devs
+
+  # * Autocorrelated process ------------------------------------------------
+
+  # autocorrelated process
+  # three: strong ar (feedback)
+
+  phi <- 0.9
+  # corrected_sd <- sqrt(1-phi^2)
+  AR_lg <- list(order = c(1, 0, 0), ar = phi)
+  AR1_lg <- arima.sim(n = t_length, model = AR_lg, innov = scaled_dev)
+
+  # * black swan ------------------------------------------------------------
+
+  # black swan
+  # four: ar and ma
+
+  phi = -0.1
+  theta = -0.1
+  # variance <- (1 + theta^2 + 2 * phi * theta) / (1 - phi^2)
+  # corrected_sd <- 1 / sqrt(variance)
+
+  AR_ma <- list(order = c(1, 0, 1), ar = phi, ma = theta)
+  AR1_ma <- arima.sim(n = t_length, model = AR_ma, innov = scaled_dev)
+
+  # AR1_ma is the simulated prey time series
+  # add black swan (bs) event(s)
+  bs_regime <- rbinom(t_length, 1, 0.015) # random chance 1-2 times per 100 years is an extreme event
+  bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*8, sd = sd(AR1_ma)/2) #lower extremes
+  bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*8, sd = sd(AR1_ma)/2) #upper extremes
+  bimodal <- c(bs_lower, bs_upper) #put the extreme cases together
+
+  prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
+    mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma)) #if bs event, randomly sample an extreme event (high or low)
+
+  # * random walk -----------------------------------------------------------
+  rw_t <- rw <- scaled_dev #process
+
+  for(k in 2:100) {
+    rw_t[k] <- rw_t[k-1] + rw[k]
+  }
+
+  # lagged rw
+  rw_t_1 <- lag(rw_t, n = 1) #prev time step
 
 
-# par(mfrow=c(3,1), mar = c(1,4,2,2))
-# plot(env1_square[burn:t_length], type = 'l', main = "Regime", ylab = "Regime index", xlab = "", xaxt="n")
-# par(mar = c(1,4,1,2))
-# acf(env1_square, main = "", lag.max = length(env1_square$regime[burn:t_length]), xlab = "", xaxt="n")
-# par(mar = c(4,4,1,2))
-# pacf(env1_square, main = "", lag.max = length(env1_square$regime[burn:t_length]), xlab = "Year")
-#
-# jpeg(here::here("figures","env1_square.jpg"), width = 600, height = 350)
-# plot(env1_square[burn:t_length], type = 'l')
-# dev.off()
-regime_p <- make_env_plots(env_index = env1_square$regime, name = "Regime short", burn = burn, t_length = t_length)
+  # * white noise -----------------------------------------------------------
 
-# regime 2 (long)
-period = 40
-env2_square <- ifelse(((t %% period) < (0.5*period)),1,0) * rbinom(t_length, 1, 0.9)
-env2_square <- env2_square %>%
-  as_tibble() %>%
-  mutate(
-    regime = if_else(
-      value == 0,
-      rnorm(n(), mean = 3, sd = 1*rl_corr), # n() gives the number of rows in the current group (here, all rows)
-      rnorm(n(), mean = 5, sd = 1*rl_corr)))
-
-regime2_p <- make_env_plots(env_index = env2_square$regime, name = "Regime long", burn = burn, t_length = t_length)
-# make_env_plots(env_index = env1_square$regime, name = "Regime", burn = 1, t_length = t_length)
-
-# two: amplified signal
-# env <- sin((2*pi*t)/(2/(t)))
-env <- (2*(sin(pi*(t^2))))/(sd(sin(pi*(t^2))))
-env <- env + rnorm(n = 100, mean = 0, sd = 1*s_corr)
-# env <- env + rnorm(n = 100, mean = 0, sd = 0.001)
-
-
-# plot(env, type = 'l')
-# plot(env[burn:t_length], type = 'l')
-# acf(env)
-# pacf(env)
-# plot(diff(env), type = 'l')
-
-# jpeg(here::here("figures","env_amp.jpg"), width = 600, height = 350)
-# plot(env[burn:t_length], type = 'l')
-# dev.off()
-signal_p <- make_env_plots(env_index = env, name = "Signal", burn = burn, t_length = t_length)
-# make_env_plots(env_index = env, name = "Signal", burn = 1, t_length = t_length)
-
-# three: strong ar (feedback)
-# set.seed(1234)
-AR_lg <- list(order = c(1, 0, 0), ar = 0.9)
-AR1_lg <- arima.sim(n = t_length, model = AR_lg, sd = 1*ap_corr)
-# plot(AR1_lg, type = 'l')
-# plot(AR1_lg[burn:t_length], type = 'l')
-# acf(AR1_lg)
-# pacf(AR1_lg)
-
-# jpeg(here::here("figures","AR_lg.jpg"), width = 600, height = 350)
-# plot(AR1_lg[burn:t_length], type = 'l')
-# dev.off()
-pred_p <- make_env_plots(env_index = AR1_lg, name = "Predator", burn = burn, t_length = t_length)
-# make_env_plots(env_index = AR1_lg, name = "Predator", burn = 1, t_length = t_length)
-
-
-# four: ar and ma
-# cps-like/ prey index that's more env driven
-# set.seed(9876)
-AR_ma <- list(order = c(1, 0, 1), ar = -0.1, ma = -0.1)
-AR1_ma <- arima.sim(n = t_length, model = AR_ma, sd = 1*bs_corr)
-# plot(AR1_ma, type = 'l')
-# plot(AR1_ma[burn:t_length], type = 'l')
-# acf(AR1_ma)
-# pacf(AR1_ma)
-
-# AR1_ma is the simulated prey time series
-# add black swan (bs) event(s)
-bs_regime <- rbinom(t_length, 1, 0.015)
-bs_lower <- rnorm(n = t_length/2, mean = mean(AR1_ma) - sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
-bs_upper <- rnorm(n = t_length/2, mean = mean(AR1_ma) + sd(AR1_ma)*8, sd = sd(AR1_ma)/2)
-bimodal <- c(bs_lower, bs_upper)
-# par(mfrow=c(2,1))
-# hist(bimodal)
-# hist(AR1_ma)
-# hist(c(AR1_ma, bimodal))
-
-prey_bs <- bind_cols(AR1_ma = AR1_ma, bs_regime = bs_regime, bimodal = sample(bimodal)) %>%
-  mutate(new_prey = if_else(bs_regime == 1, bimodal, AR1_ma))
-
-# plot(AR1_ma, type = 'l', ylim = c(-0.6, 0.6))
-# plot(prey_bs$new_prey, type = 'l')
-# plot(AR1_ma[burn:t_length], type = 'l', ylim = c(-0.6, 0.6))
-# plot(prey_bs$new_prey[burn:t_length], type = 'l')
-
-# devs <- rnorm(t_length, mean = c(mu1, mu2)[bs_regime],  sd = c(sd1, sd2)[bs_regime])
-
-# jpeg(here::here("figures","AR_ma.jpg"), width = 600, height = 350)
-# plot(AR1_ma[burn:t_length], type = 'l')
-# dev.off()
-# prey_p <- make_env_plots(env_index = AR1_ma, name = "Prey", burn = burn, t_length = t_length)
-# prey_p <- make_env_plots(env_index = x, name = "Prey", burn = burn, t_length = t_length)
-prey_p <- make_env_plots(env_index = prey_bs$new_prey, name = "Prey", burn = burn, t_length = t_length)
-# make_env_plots(env_index = prey_bs$new_prey, name = "Prey", burn = 1, t_length = t_length)
-
-# five: non-stationary (trend)
-# set.seed(5678)
-ts_ns <- list(order = c(1, 1, 0), ar = -0.5)
-ts_ns1 <- arima.sim(n = t_length, model = ts_ns, sd = 1*et_corr) *-1
-# plot(ts_ns1, type = 'l')
-# plot(ts_ns1[burn:t_length], type = 'l')
-# acf(ts_ns1)
-# pacf(ts_ns1)
-
-# jpeg(here::here("figures","ts_ns1.jpg"), width = 600, height = 350)
-# plot(ts_ns1[burn:t_length], type = 'l')
-# dev.off()
-climate_p <- make_env_plots(env_index = ts_ns1, name = "Climate", burn = burn, t_length = t_length)
-# make_env_plots(env_index = ts_ns1, name = "Climate", burn = 1, t_length = t_length)
-
-
-# six: make random walk
-rw_t <- rw <- rnorm(n = 100, mean = 0, sd = 1*rw_corr) #process
-
-# rw_targ <- rw_t +rw_t_1
-
-for(k in 2:100) {
-  rw_t[k] <- rw_t[k-1] + rw[k]
-}
-
-# seven: create lagged rw
-rw_t_1 <- lag(rw_t, n = 1) #prev time step
-
-# get correct time for rw's
-burn_to <- t_length - burn + 1
-random_walk <- tail(rw_t, n = burn_to)
-random_walk_lag <- tail(rw_t_1, n = burn_to)
-# random_walk_target <- tail(rw_targ, n = burn_to)
-
-rw_p <- make_env_plots(env_index = rw_t, name = "Random walk", burn = burn, t_length = t_length)
-rwlag_p <- make_env_plots(env_index = rw_t_1, name = "Random walk lag", burn = burn, t_length = t_length)
-
-# white noise
-wn <- rnorm(n=100, mean = 0, sd = 1*wn_corr)
-wn_p <- make_env_plots(env_index = wn, name = "White noise", burn = burn, t_length = t_length)
+  # wn <- scaled_dev
+  # generate a new wn process, so that wn is different from process error in other ts
+  # I think it makes sense that wn is the only process without the same process error...
+  #      unless we want to explicitly test whether RF can pick up process error?
+  wn <- rnorm(n=100, mean = 0, sd = 1)
+  wn <- wn / sd(wn)
 
 # env indices- full -------------------------------------------------------
 
@@ -470,62 +253,62 @@ env_data <- env_data_full %>% slice_tail(n = dat_length)
 
 env_data_sc <- env_data_full_sc %>% slice_tail(n = dat_length)
 
-env_p <- regime_p | regime2_p | signal_p |climate_p |pred_p | prey_p |rw_p |wn_p #|rwlag_p
-ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
-       width = 21, height = 9)
+# env_p <- regime_p | regime2_p | signal_p |climate_p |pred_p | prey_p |rw_p |wn_p #|rwlag_p
+# ggsave(plot = env_p, filename = paste0(iter, "_all_env.jpg"), path = here::here("figures"),
+       # width = 21, height = 9)
 
 
 # make more plots ---------------------------------------------------------
 
-regimes_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_short), name = "Regime short", burn = burn, t_length = t_length)
-regimel_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_long), name = "Regime long", burn = burn, t_length = t_length)
-signal_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = burn, t_length = t_length)
-climate_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = burn, t_length = t_length)
-pred_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = burn, t_length = t_length)
-prey_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = burn, t_length = t_length)
-rw_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = burn, t_length = t_length)
-rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = burn, t_length = t_length)
-wn_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = burn, t_length = t_length)
-
-
-env_p_30sc <- regimes_p_30sc | regimel_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc  | wn_p_30sc #|rwlag_p_30sc
-ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
-       width = 21, height = 9)
-
-
-# 100_sc
-
-regimes_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_short), name = "Regime short", burn = 1, t_length = t_length)
-regimel_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_long), name = "Regime long", burn = 1, t_length = t_length)
-signal_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = 1, t_length = t_length)
-climate_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = 1, t_length = t_length)
-pred_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = 1, t_length = t_length)
-prey_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = 1, t_length = t_length)
-rw_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = 1, t_length = t_length)
-rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = 1, t_length = t_length)
-wn_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = 1, t_length = t_length)
-
-
-env_p_100sc <- regimes_p_100sc | regimel_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc  |wn_p_100sc #|rwlag_p_100sc
-ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
-       width = 21, height = 9)
-
-
-# 100
-
-regimes_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime_short), name = "Regime short", burn = 1, t_length = t_length)
-regimel_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime_long), name = "Regime long", burn = 1, t_length = t_length)
-signal_p_100 <- make_env_plots(env_index = as.vector(env_data_full$signal), name = "Signal", burn = 1, t_length = t_length)
-climate_p_100 <- make_env_plots(env_index = as.vector(env_data_full$climate), name = "Climate", burn = 1, t_length = t_length)
-pred_p_100 <- make_env_plots(env_index = as.vector(env_data_full$pred), name = "Predator", burn = 1, t_length = t_length)
-prey_p_100 <- make_env_plots(env_index = as.vector(env_data_full$prey), name = "Prey", burn = 1, t_length = t_length)
-rw_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk), name = "Random walk", burn = 1, t_length = t_length)
-rwlag_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
-wn_p_100 <- make_env_plots(env_index = as.vector(env_data_full$white_noise), name = "White noise", burn = 1, t_length = t_length)
-
-env_p_100 <- regimes_p_100 | regimel_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100  | wn_p_100 #|rwlag_p_100
-ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
-       width = 21, height = 9)
+# regimes_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_short), name = "Regime short", burn = burn, t_length = t_length)
+# regimel_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_long), name = "Regime long", burn = burn, t_length = t_length)
+# signal_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = burn, t_length = t_length)
+# climate_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = burn, t_length = t_length)
+# pred_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = burn, t_length = t_length)
+# prey_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = burn, t_length = t_length)
+# rw_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = burn, t_length = t_length)
+# rwlag_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = burn, t_length = t_length)
+# wn_p_30sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = burn, t_length = t_length)
+#
+#
+# env_p_30sc <- regimes_p_30sc | regimel_p_30sc | signal_p_30sc |climate_p_30sc |pred_p_30sc | prey_p_30sc |rw_p_30sc  | wn_p_30sc #|rwlag_p_30sc
+# ggsave(plot = env_p_30sc, filename = paste0(iter, "_all_env_sc.jpg"), path = here::here("figures"),
+#        width = 21, height = 9)
+#
+#
+# # 100_sc
+#
+# regimes_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_short), name = "Regime short", burn = 1, t_length = t_length)
+# regimel_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$regime_long), name = "Regime long", burn = 1, t_length = t_length)
+# signal_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$signal), name = "Signal", burn = 1, t_length = t_length)
+# climate_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$climate), name = "Climate", burn = 1, t_length = t_length)
+# pred_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$pred), name = "Predator", burn = 1, t_length = t_length)
+# prey_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$prey), name = "Prey", burn = 1, t_length = t_length)
+# rw_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk), name = "Random walk", burn = 1, t_length = t_length)
+# rwlag_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$random_walk_lag), name = "Random walk lag", burn = 1, t_length = t_length)
+# wn_p_100sc <- make_env_plots(env_index = as.vector(env_data_full_sc$white_noise), name = "White noise", burn = 1, t_length = t_length)
+#
+#
+# env_p_100sc <- regimes_p_100sc | regimel_p_100sc | signal_p_100sc |climate_p_100sc |pred_p_100sc | prey_p_100sc |rw_p_100sc  |wn_p_100sc #|rwlag_p_100sc
+# ggsave(plot = env_p_100sc, filename = paste0(iter, "_all_env_100sc.jpg"), path = here::here("figures"),
+#        width = 21, height = 9)
+#
+#
+# # 100
+#
+# regimes_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime_short), name = "Regime short", burn = 1, t_length = t_length)
+# regimel_p_100 <- make_env_plots(env_index = as.vector(env_data_full$regime_long), name = "Regime long", burn = 1, t_length = t_length)
+# signal_p_100 <- make_env_plots(env_index = as.vector(env_data_full$signal), name = "Signal", burn = 1, t_length = t_length)
+# climate_p_100 <- make_env_plots(env_index = as.vector(env_data_full$climate), name = "Climate", burn = 1, t_length = t_length)
+# pred_p_100 <- make_env_plots(env_index = as.vector(env_data_full$pred), name = "Predator", burn = 1, t_length = t_length)
+# prey_p_100 <- make_env_plots(env_index = as.vector(env_data_full$prey), name = "Prey", burn = 1, t_length = t_length)
+# rw_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk), name = "Random walk", burn = 1, t_length = t_length)
+# rwlag_p_100 <- make_env_plots(env_index = as.vector(env_data_full$random_walk_lag), name = "Random walk", burn = 1, t_length = t_length)
+# wn_p_100 <- make_env_plots(env_index = as.vector(env_data_full$white_noise), name = "White noise", burn = 1, t_length = t_length)
+#
+# env_p_100 <- regimes_p_100 | regimel_p_100 | signal_p_100 |climate_p_100 |pred_p_100 | prey_p_100 |rw_p_100  | wn_p_100 #|rwlag_p_100
+# ggsave(plot = env_p_100, filename = paste0(iter, "_all_env_100.jpg"), path = here::here("figures"),
+#        width = 21, height = 9)
 
 # sim notes ---------------------------------------------------------------
 
@@ -683,21 +466,21 @@ write_csv(all_100_sc, file = here::here("output", paste0("complete_sim_input_dat
 # check distributions -----------------------------------------------------
 
 ts <- read_csv(here::here("output", "complete_sim_input_data_unscaled_100_2025-08-31.csv"))
-sd(ts$regime_short)
-sd(ts$regime_long)
-sd(ts$signal)
-sd(ts$climate)
-sd(ts$pred)
-sd(ts$prey)
-sd(ts$random_walk)
-sd(ts$white_noise)
-
+# sd(ts$regime_short)
+# sd(ts$regime_long)
+# sd(ts$signal)
+# sd(ts$climate)
+# sd(ts$pred)
+# sd(ts$prey)
+# sd(ts$random_walk)
+# sd(ts$white_noise)
+#
 ts2 <- read_csv(here::here("output", "complete_sim_input_data_scaled_100_2025-08-31.csv"))
-sd(ts2$regime_short)
-sd(ts2$regime_long)
-sd(ts2$signal)
-sd(ts2$climate)
-sd(ts2$pred)
-sd(ts2$prey)
-sd(ts2$random_walk)
-sd(ts2$white_noise)
+# sd(ts2$regime_short)
+# sd(ts2$regime_long)
+# sd(ts2$signal)
+# sd(ts2$climate)
+# sd(ts2$pred)
+# sd(ts2$prey)
+# sd(ts2$random_walk)
+# sd(ts2$white_noise)
