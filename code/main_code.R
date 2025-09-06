@@ -46,15 +46,47 @@ for(iter in 1:n_sim)
   env1_square <- env1_square %>%
     as_tibble() %>%
     mutate(
-      regime = if_else(
-        value == 0,
-        rnorm(n(), mean = 3, sd = 1), # n() gives the number of rows in the current group (here, all rows)
-        rnorm(n(), mean = 5, sd = 1)))
+      # regime = if_else(
+      #   value == 0,
+      #   rnorm(n(), mean = 3, sd = 1), # n() gives the number of rows in the current group (here, all rows)
+      #   rnorm(n(), mean = 5, sd = 1)),
+      mean = if_else(
+        value == 0,3,5),
+      dev = rnorm(n(), mean = 0, sd = 1),
+      regime = mean+dev)
 
-  sdd <- sd(env1_square$regime)
-  rs_dist[iter] <- sdd
+  sigma0 <- env1_square %>%
+    dplyr::filter(value == 0) %>%
+    summarize(sigma0 = sd(regime))
+  sigma1 <- env1_square %>%
+    dplyr::filter(value == 1) %>%
+    summarize(sigma1 = sd(regime))
+
+  #   sd(env1_square$regime)
+  # new_dev <- env1_square$regime/sigma
+  #
+  # test <- env1_square %>%
+  #   bind_cols(new_dev = new_dev) %>%
+  #   mutate(regime_corr = mean+new_dev)
+  #
+  # plot(test$regime_corr, type = 'l')
+  # #
+  #
+  # env1_square <- env1_square %>%
+  #   mutate(reg_corr = )
+  #
+  # env1_square$reg_corr <- sd(r/sd(env1_square$regime)) + env1_square$mean
+  #
+  # sdd <- sd(env1_square$regime)
+  # # rs_dist[iter] <- sdd
+  # env1_square$regime <- env1_square$dev/sdd + env1_square$mean
+  # sd(env1_square$dev/sdd)
+  #
+  # env1_square %>% dplyr::filter(value ==1) %>%
+  #   summarize(sd(dev/sdd))
+  #
 }
-rs_corr <- 1/mean(rs_dist)
+# rs_corr <- 1/mean(rs_dist)
 
 rl_dist <- rep(0,n_sim)
 for(iter in 1:n_sim)
@@ -73,20 +105,30 @@ for(iter in 1:n_sim)
   sdd <- sd(env2_square$regime)
   rl_dist[iter] <- sdd
 }
-rl_corr <- 1/mean(rl_dist)
+# rl_corr <- 1/mean(rl_dist)
 
 s_dist <- rep(0,n_sim)
+s_dist2 <- rep(0,n_sim)
 for(iter in 1:n_sim)
 {
   # signal
   # two: amplified signal
   # env <- sin((2*pi*t)/(2/(t)))
-  env <- (2*(sin(pi*(t^2))))/(sd(sin(pi*(t^2))))
-  env <- env + rnorm(n = 100, mean = 0, sd = 1)
+  env_base <- (2*(sin(pi*(t^2))))/(sd(sin(pi*(t^2))))
+  env <- env_base + rnorm(n = 100, mean = 0, sd = 1)
+  # plot(env, type = 'l')
 
-  sdd <- sd(env)
-  s_dist[iter] <- sdd
+  sigma <- sd(env) - sd(env_base)
+  env2 <- env_base + rnorm(n = 100, mean = 0, sd = (1/sigma))
+  sigma2 <- sd(env2) - sd(env_base)
+  # plot(env2, type = 'l')
+
+  s_dist[iter] <- sigma
+  s_dist2[iter] <- sigma2
 }
+hist(s_dist)
+hist(s_dists)
+
 s_corr <- 1/mean(s_dist)
 
 ap_dist <- rep(0,n_sim)
@@ -97,8 +139,10 @@ for(iter in 1:n_sim)
   # set.seed(1234)
   AR_lg <- list(order = c(1, 0, 0), ar = 0.9)
   AR1_lg <- arima.sim(n = t_length, model = AR_lg, sd = 1)
+  # plot(AR1_lg, type = 'l')
 
   sdd <- sd(AR1_lg)
+
   ap_dist[iter] <- sdd
 
 }
@@ -157,7 +201,16 @@ for(iter in 1:n_sim)
   for(k in 2:100) {
     rw_t[k] <- rw_t[k-1] + rw[k]
   }
-  sdd <- sd(rw_t)
+  sigma <- sd(rw_t)
+
+  rw_t <- rw <- rnorm(n = 100, sd = 1/sigma) #process
+
+  # rw_targ <- rw_t +rw_t_1
+
+  for(k in 2:100) {
+    rw_t[k] <- rw_t[k-1] + rw[k]
+  }
+  sd(rw_t)
   rw_dist[iter] <- sdd
 }
 rw_corr <- 1/mean(rw_dist)
@@ -626,3 +679,25 @@ write_csv(all_100, file = here::here("output", paste0("complete_sim_input_data_u
 write_csv(all_100_sc, file = here::here("output", paste0("complete_sim_input_data_scaled_100_", Sys.Date(),".csv"))) #all targets are sc, but env indices are unscaled here
 
 # also create example with multicollinear factors
+
+# check distributions -----------------------------------------------------
+
+ts <- read_csv(here::here("output", "complete_sim_input_data_unscaled_100_2025-08-31.csv"))
+sd(ts$regime_short)
+sd(ts$regime_long)
+sd(ts$signal)
+sd(ts$climate)
+sd(ts$pred)
+sd(ts$prey)
+sd(ts$random_walk)
+sd(ts$white_noise)
+
+ts2 <- read_csv(here::here("output", "complete_sim_input_data_scaled_100_2025-08-31.csv"))
+sd(ts2$regime_short)
+sd(ts2$regime_long)
+sd(ts2$signal)
+sd(ts2$climate)
+sd(ts2$pred)
+sd(ts2$prey)
+sd(ts2$random_walk)
+sd(ts2$white_noise)
